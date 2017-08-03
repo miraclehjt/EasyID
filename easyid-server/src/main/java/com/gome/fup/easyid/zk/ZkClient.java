@@ -48,7 +48,7 @@ public class ZkClient {
         zooKeeper = new ZooKeeper(address, SESSIONTIMEOUT, null);
         Stat stat = zooKeeper.exists(ZK_ROOT_NODE, false);
         if (null == stat) {
-            zooKeeper.create(ZK_ROOT_NODE, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            zooKeeper.create(ZK_ROOT_NODE, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
         }
     }
 
@@ -115,5 +115,9 @@ public class ZkClient {
             }
         }
         return result;
+    }
+
+    public void close() throws InterruptedException {
+        zooKeeper.close();
     }
 }
