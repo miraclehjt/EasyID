@@ -9,6 +9,12 @@
     <version>1.0-SNAPSHOT</version>
 
     <dependencies>
+        <!-- EasyID-Common -->
+        <dependency>
+            <groupId>com.gome.fup.easyid</groupId>
+            <artifactId>EasyID-Common</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
         <!-- log4j2 -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
