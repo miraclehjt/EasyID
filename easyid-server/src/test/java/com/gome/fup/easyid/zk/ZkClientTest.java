@@ -13,7 +13,7 @@ public class ZkClientTest {
     @Test
     public void testRegister() throws InterruptedException, IOException, KeeperException {
         ZkClient client = new ZkClient("127.0.0.1:2181");
-        client.register("testRegister");
+        client.register("192.168.56.102");
     }
 
     @Test
@@ -28,5 +28,12 @@ public class ZkClientTest {
         ZkClient client = new ZkClient("127.0.0.1:2181");
         int increase = client.decrease("testRegister");
         System.out.println(increase);
+    }
+
+    @Test
+    public void testBalance() throws InterruptedException, IOException, KeeperException {
+        ZkClient client = new ZkClient("127.0.0.1:2181");
+        String node = client.balance();
+        System.out.println(node);
     }
 }
