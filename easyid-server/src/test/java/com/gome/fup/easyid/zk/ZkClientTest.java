@@ -29,11 +29,4 @@ public class ZkClientTest {
         int increase = client.decrease("testRegister");
         System.out.println(increase);
     }
-
-    @Test
-    public void testBalance() throws InterruptedException, IOException, KeeperException {
-        ZkClient client = new ZkClient("127.0.0.1:2181");
-        String node = client.balance();
-        System.out.println(node);
-    }
 }
