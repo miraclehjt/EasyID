@@ -8,6 +8,7 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * ZooKeeper客户端类，在ZooKeeper上注册服务信息，并实现负载均衡
@@ -68,9 +69,8 @@ public class ZkClient {
      * @throws InterruptedException
      */
     public synchronized int increase(String node) throws KeeperException, InterruptedException {
-        String path = getNodePath(node);
-        int count = getCount(path);
-        zooKeeper.setData(path, ConversionUtil.intToByteArray(++count), -1);
+        int count = getCount(node);
+        zooKeeper.setData(getNodePath(node), ConversionUtil.intToByteArray(++count), -1);
         return count;
     }
 
@@ -81,20 +81,39 @@ public class ZkClient {
      * @throws InterruptedException
      */
     public synchronized int decrease(String node) throws KeeperException, InterruptedException {
-        String path = getNodePath(node);
-        int count = getCount(path);
+        int count = getCount(node);
         if (count > 0) {
-            zooKeeper.setData(path, ConversionUtil.intToByteArray(--count), -1);
+            zooKeeper.setData(getNodePath(node), ConversionUtil.intToByteArray(--count), -1);
         }
         return count;
     }
 
-    public int getCount(String path) throws KeeperException, InterruptedException {
-        byte[] data = zooKeeper.getData(path, null, null);
+    public int getCount(String node) throws KeeperException, InterruptedException {
+        byte[] data = zooKeeper.getData(getNodePath(node), null, null);
         return ConversionUtil.byteArrayToInt(data);
     }
 
     private String getNodePath(String node) {
         return ZK_ROOT_NODE + "/" + node;
+    }
+
+    /**
+     * 负载均衡算法：zk中连接数最少的节点ip
+     * @return
+     * @throws KeeperException
+     * @throws InterruptedException
+     */
+    public String balance() throws KeeperException, InterruptedException {
+        List<String> nodes = zooKeeper.getChildren(ZK_ROOT_NODE, null);
+        String result = null;
+        int min = 0;
+        for (int i = 0; i < nodes.size(); i++) {
+            int count = getCount(nodes.get(i));
+            if (i == 0 || count < min) {
+                min = count;
+                result = nodes.get(i);
+            }
+        }
+        return result;
     }
 }
