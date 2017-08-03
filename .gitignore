@@ -2,4 +2,4 @@ target/
 *.class
 *.iml
 .idea/
-*/test/*
+*Test.java
