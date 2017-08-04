@@ -1,6 +1,8 @@
 package com.gome.fup.easyid.zk;
 
+import com.gome.fup.easyid.exception.ZooKeeperNoAddressException;
 import com.gome.fup.easyid.util.ConversionUtil;
+import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
@@ -15,20 +17,34 @@ import java.io.IOException;
  */
 public class ZkClient extends AbstractZkClient {
 
+    private static final Logger logger = Logger.getLogger(ZkClient.class);
+
+    private String address;
+
+    public ZkClient() {
+    }
+
+    public ZkClient(String address) throws InterruptedException, IOException, KeeperException {
+        this.address = address;
+        connect();
+    }
+
     /**
      * 初始化ZooKeeper客户端，并判断是否有根节点，没有则创建持久化节点
-     * @param address
      * @throws IOException
      * @throws KeeperException
      * @throws InterruptedException
      */
-    public ZkClient(String address) throws IOException, KeeperException, InterruptedException {
-        this.address = address;
+    public void connect() throws IOException, KeeperException, InterruptedException {
+        if (address == null || "".equals(address)) {
+            throw new ZooKeeperNoAddressException("zookeeper address not null!");
+        }
         zooKeeper = new ZooKeeper(address, SESSIONTIMEOUT, null);
         Stat stat = zooKeeper.exists(ZK_ROOT_NODE, false);
         if (null == stat) {
             zooKeeper.create(ZK_ROOT_NODE, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
+        logger.info("ZooKeeper connected!");
     }
 
     /**
@@ -37,8 +53,22 @@ public class ZkClient extends AbstractZkClient {
      * @throws KeeperException
      * @throws InterruptedException
      */
-    public void register(String node) throws KeeperException, InterruptedException {
+    public void register(String node) throws KeeperException, InterruptedException, IOException {
+        if (zooKeeper == null) connect();
+        if (hasRegisted(node)) return;
         zooKeeper.create(getNodePath(node), ConversionUtil.intToByteArray(0), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        logger.info("ZooKeeper registered!");
+    }
+
+    /**
+     * 校验当前节点是否已经存在
+     * @param node
+     * @return
+     * @throws KeeperException
+     * @throws InterruptedException
+     */
+    private boolean hasRegisted(String node) throws KeeperException, InterruptedException {
+        return zooKeeper.exists(getNodePath(node), false) == null ? false : true;
     }
 
     /**
@@ -47,9 +77,11 @@ public class ZkClient extends AbstractZkClient {
      * @throws KeeperException
      * @throws InterruptedException
      */
-    public synchronized int increase(String node) throws KeeperException, InterruptedException {
+    public synchronized int increase(String node) throws KeeperException, InterruptedException, IOException {
+        if (zooKeeper == null) connect();
         int count = getCount(node);
         zooKeeper.setData(getNodePath(node), ConversionUtil.intToByteArray(++count), -1);
+        logger.info("ZooKeeper increase count:" + count);
         return count;
     }
 
@@ -59,12 +91,21 @@ public class ZkClient extends AbstractZkClient {
      * @throws KeeperException
      * @throws InterruptedException
      */
-    public synchronized int decrease(String node) throws KeeperException, InterruptedException {
+    public synchronized int decrease(String node) throws KeeperException, InterruptedException, IOException {
+        if (zooKeeper == null) connect();
         int count = getCount(node);
         if (count > 0) {
             zooKeeper.setData(getNodePath(node), ConversionUtil.intToByteArray(--count), -1);
         }
+        logger.info("ZooKeeper decrease count:" + count);
         return count;
     }
 
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
 }
