@@ -18,7 +18,7 @@ EasyID是一个以snowflake算法为基础的轻量、高效的生成唯一ID的
   基于redis实现批量存储；<br/>
   
   
-# 部署
+# 服务部署
 
   在easyid-server中的conf.properties文件中，配置redis和zookeeper信息；<br/>
   使用maven命令打包easyid-server:mvn clean instll -Dmaven.test.skip=true；<br/>
@@ -30,7 +30,12 @@ EasyID是一个以snowflake算法为基础的轻量、高效的生成唯一ID的
     若不指定参数，默认workerid为10，datacenterid为11。<br/>
     建议不同的机器，设置不同的值<br/>
   
-  
+
+# 客户端
+
+  添加easy-cli项目的依赖；<br/>
+  在spring配置文件中配置EasyID、ZkClient、Observer类，参考easy-demo项目的配置；<br/>
+  通过EasyID类的nextId()，获取id。<br/>
   
 
 
