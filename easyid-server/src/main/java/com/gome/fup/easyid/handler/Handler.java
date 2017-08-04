@@ -47,7 +47,7 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
                     return null;
                 }
             });
-            zkClient.decrease(ip);
+            //zkClient.decrease(ip);
             ctx.writeAndFlush("").addListener(ChannelFutureListener.CLOSE);
         }
     }
