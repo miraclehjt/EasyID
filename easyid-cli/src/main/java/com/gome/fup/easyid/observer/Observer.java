@@ -66,6 +66,7 @@ public class Observer implements InitializingBean, ApplicationContextAware{
                         String ip = zkClient.balance();
                         host = IpUtil.getHost(ip);
                         port = Constant.EASYID_SERVER_PORT;
+                        //向服务端发送创建ID请求
                         send();
                         logger.info("send request to server!");
                         //关闭开关
