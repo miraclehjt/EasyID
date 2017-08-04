@@ -49,4 +49,8 @@
         <property name="redisTemplate" ref="redisTemplate" />
     </bean>
     <!-- server end -->
+
+    <!-- zookeeper client begin -->
+    <bean id="zkClient" class="com.gome.fup.easyid.zk.ZkClient" />
+    <!-- zookeeper client end -->
 </beans>
