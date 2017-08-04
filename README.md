@@ -17,7 +17,7 @@ EasyID是一个以snowflake算法为基础的轻量、高效的生成唯一ID的
   基于zookeeper实现服务注册、负载均衡；<br/>
   基于redis实现批量存储；<br/>
   
-  
+  
 # 服务部署
 
   在easyid-server中的conf.properties文件中，配置redis和zookeeper信息；<br/>
