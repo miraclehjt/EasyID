@@ -3,10 +3,7 @@ package com.gome.fup.easyid.zk;
 import com.gome.fup.easyid.exception.ZooKeeperNoAddressException;
 import com.gome.fup.easyid.util.ConversionUtil;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
 
 import java.io.IOException;
@@ -39,7 +36,11 @@ public class ZkClient extends AbstractZkClient {
         if (address == null || "".equals(address)) {
             throw new ZooKeeperNoAddressException("zookeeper address not null!");
         }
-        zooKeeper = new ZooKeeper(address, SESSIONTIMEOUT, null);
+        zooKeeper = new ZooKeeper(address, SESSIONTIMEOUT, new Watcher() {
+            public void process(WatchedEvent event) {
+                logger.info("zookeeper type : " + event.getType() + ", and state" + event.getState());
+            }
+        });
         Stat stat = zooKeeper.exists(ZK_ROOT_NODE, false);
         if (null == stat) {
             zooKeeper.create(ZK_ROOT_NODE, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
@@ -56,7 +57,7 @@ public class ZkClient extends AbstractZkClient {
     public void register(String node) throws KeeperException, InterruptedException, IOException {
         if (zooKeeper == null) connect();
         if (hasRegisted(node)) return;
-        zooKeeper.create(getNodePath(node), ConversionUtil.intToByteArray(0), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        zooKeeper.create(getNodePath(node), ConversionUtil.intToByteArray(0), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
         logger.info("ZooKeeper registered!");
     }
 
