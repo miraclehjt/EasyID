@@ -25,8 +25,8 @@ EasyID是一个以snowflake算法为基础的轻量、高效的生成唯一ID的
   部署easyid-server：java -jar EasyID-Server-1.0-SNAPSHOT.jar -workerid10 -datacenterid11；<br/>
   
   参数说明：<br/>
-    -workerid：工作ID，取值1~31；<br/>
-    -datacenterid：数据中心ID，取值1~31；<br/>
+    -workerid：工作ID，取值1至31；<br/>
+    -datacenterid：数据中心ID，取值1至31；<br/>
     若不指定参数，默认workerid为10，datacenterid为11。<br/>
     建议不同的机器，设置不同的值<br/>
   
