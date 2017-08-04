@@ -23,6 +23,8 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
+import java.io.IOException;
+
 /**
  * 观察者类，监听EasyID状态变化，通知服务端创建ID
  * Created by fupeng-ds on 2017/8/3.
@@ -72,8 +74,15 @@ public class Observer implements InitializingBean, ApplicationContextAware{
                         //关闭开关
                         easyID.setFlag(false);
                     } catch (KeeperException e) {
-                        e.printStackTrace();
-                        logger.equals(e.getMessage());
+                        try {
+                            //zookeeper会话超时，重建客户端
+                            logger.error("zookeeper session timeout!");
+                            logger.info("create zookeeper client!");
+                            zkClient.createZooKeeper();
+                        } catch (IOException e1) {
+                            logger.error("create zookeeper client fail!");
+                            logger.error(e1);
+                        }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                         logger.equals(e.getMessage());
