@@ -37,27 +37,16 @@ public class Snowflake {
     private final long sequenceMask = -1L ^ (-1L << sequenceBits);
 
     /** 工作机器ID(0~31) */
-    private long workerId;
+    private long workerId = 10l;
 
     /** 数据中心ID(0~31) */
-    private long datacenterId;
+    private long datacenterId = 11l;
 
     /** 毫秒内序列(0~4095) */
     private long sequence = 0L;
 
     /** 上次生成ID的时间截 */
     private long lastTimestamp = -1L;
-
-    public Snowflake(long workerId, long datacenterId) {
-        if (workerId > maxWorkerId || workerId < 0) {
-            throw new IllegalArgumentException(String.format("worker Id can't be greater than %d or less than 0", maxWorkerId));
-        }
-        if (datacenterId > maxDatacenterId || datacenterId < 0) {
-            throw new IllegalArgumentException(String.format("datacenter Id can't be greater than %d or less than 0", maxDatacenterId));
-        }
-        this.workerId = workerId;
-        this.datacenterId = datacenterId;
-    }
 
     /**
      * 获得下一个ID (该方法是线程安全的)
@@ -100,7 +89,7 @@ public class Snowflake {
      * 批量获取num个ID (该方法是线程安全的)
      * @return SnowflakeId[]
      */
-    public long[] nextId(int num) {
+    public long[] nextIds(int num) {
         long[] array = new long[num];
         for (int i = 0; i < num; i++) {
             array[i] = nextId();
@@ -127,5 +116,27 @@ public class Snowflake {
      */
     protected long timeGen() {
         return System.currentTimeMillis();
+    }
+
+    public long getWorkerId() {
+        return workerId;
+    }
+
+    public void setWorkerId(long workerId) {
+        if (workerId > maxWorkerId || workerId < 0) {
+            throw new IllegalArgumentException(String.format("worker Id can't be greater than %d or less than 0", maxWorkerId));
+        }
+        this.workerId = workerId;
+    }
+
+    public long getDatacenterId() {
+        return datacenterId;
+    }
+
+    public void setDatacenterId(long datacenterId) {
+        if (datacenterId > maxDatacenterId || datacenterId < 0) {
+            throw new IllegalArgumentException(String.format("datacenter Id can't be greater than %d or less than 0", maxDatacenterId));
+        }
+        this.datacenterId = datacenterId;
     }
 }
