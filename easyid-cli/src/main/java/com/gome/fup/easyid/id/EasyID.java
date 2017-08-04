@@ -1,11 +1,13 @@
 package com.gome.fup.easyid.id;
 
 import com.gome.fup.easyid.exception.NoMoreValueInRedisException;
+import com.gome.fup.easyid.util.Constant;
 import com.gome.fup.easyid.util.KryoUtil;
+import org.apache.log4j.Logger;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.RedisOperations;
 
 import java.io.Serializable;
 
@@ -15,10 +17,7 @@ import java.io.Serializable;
  */
 public class EasyID {
 
-    /**
-     * redis key
-     */
-    private final String REDIS_LIST_NAME = "EasyID";
+    private static final Logger logger = Logger.getLogger(EasyID.class);
 
     /**
      * redis队列中最低ID数量，低于此数量时，服务端开始生成新的ID并存入redis队列
@@ -30,7 +29,7 @@ public class EasyID {
      */
     private volatile boolean flag = false;
 
-    private RedisTemplate<Serializable, Serializable> redisTemplate;
+    private RedisOperations<Serializable, Serializable> redisTemplate;
 
     /**
      * 获取id
@@ -48,18 +47,28 @@ public class EasyID {
     public Long[] nextIds(final int count) {
         return redisTemplate.execute(new RedisCallback<Long[]>() {
             public Long[] doInRedis(RedisConnection connection) throws DataAccessException {
-                byte[] key = KryoUtil.objToByte(REDIS_LIST_NAME);
+                byte[] key = KryoUtil.objToByte(Constant.REDIS_LIST_NAME);
                 Long len = connection.lLen(key);
-                if (count > len.intValue()) {
-                    try {
-                        throw new NoMoreValueInRedisException("没有足够的值");
-                    } catch (NoMoreValueInRedisException e) {
-                        e.printStackTrace();
+                if (len.intValue() == 0) {
+                    //打开开关，服务端需要生产更多的id
+                    flag = true;
+                    logger.info("no id in redis!");
+                    while (true) {
+                        Long l = connection.lLen(key);
+
+                        if (l > 0) {
+                            len = l;
+                            break;
+                        }
                     }
+                }
+                if (count > len.intValue()) {
+                    throw new NoMoreValueInRedisException("没有足够的值");
                 }
                 if (len < REDIS_LIST_MIN_SIZE) {
                     //打开开关，服务端需要生产更多的id
                     flag = true;
+                    logger.info("ids in redis less then 300");
                 }
                 Long[] ids = new Long[count];
                 for (int i = 0; i < count; i++) {
@@ -71,12 +80,19 @@ public class EasyID {
         });
     }
 
-    public RedisTemplate getRedisTemplate() {
+    public RedisOperations<Serializable, Serializable> getRedisTemplate() {
         return redisTemplate;
     }
 
-    public void setRedisTemplate(RedisTemplate redisTemplate) {
+    public void setRedisTemplate(RedisOperations<Serializable, Serializable> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
+    public boolean isFlag() {
+        return flag;
+    }
+
+    public void setFlag(boolean flag) {
+        this.flag = flag;
+    }
 }
