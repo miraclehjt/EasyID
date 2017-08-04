@@ -49,26 +49,23 @@ public class EasyID {
             public Long[] doInRedis(RedisConnection connection) throws DataAccessException {
                 byte[] key = KryoUtil.objToByte(Constant.REDIS_LIST_NAME);
                 Long len = connection.lLen(key);
-                if (len.intValue() == 0) {
-                    //打开开关，服务端需要生产更多的id
-                    flag = true;
-                    logger.info("no id in redis!");
-                    while (true) {
-                        Long l = connection.lLen(key);
-
-                        if (l > 0) {
-                            len = l;
-                            break;
-                        }
-                    }
-                }
-                if (count > len.intValue()) {
-                    throw new NoMoreValueInRedisException("没有足够的值");
-                }
                 if (len < REDIS_LIST_MIN_SIZE) {
                     //打开开关，服务端需要生产更多的id
                     flag = true;
+                    if (len.intValue() == 0) {
+                        logger.info("no id in redis!");
+                        while (true) {
+                            Long l = connection.lLen(key);
+                            if (l > 0) {
+                                len = l;
+                                break;
+                            }
+                        }
+                    }
                     logger.info("ids in redis less then 300");
+                }
+                if (count > len.intValue()) {
+                    throw new NoMoreValueInRedisException("没有足够的值");
                 }
                 Long[] ids = new Long[count];
                 for (int i = 0; i < count; i++) {
