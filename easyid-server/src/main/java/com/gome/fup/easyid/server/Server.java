@@ -6,6 +6,7 @@ import com.gome.fup.easyid.model.Request;
 import com.gome.fup.easyid.snowflake.Snowflake;
 import com.gome.fup.easyid.util.Constant;
 import com.gome.fup.easyid.util.IpUtil;
+import com.gome.fup.easyid.zk.ZkClient;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -39,6 +40,8 @@ public class Server implements Runnable, InitializingBean, ApplicationContextAwa
 
     private Snowflake snowflake;
 
+    private ZkClient zkClient;
+
     public void afterPropertiesSet() throws Exception {
         executorService.submit(this);
         logger.info("EasyID Server started!");
@@ -59,7 +62,7 @@ public class Server implements Runnable, InitializingBean, ApplicationContextAwa
                                 throws Exception {
                             socketChannel.pipeline()
                                     .addLast(new DecoderHandler(Request.class))
-                                    .addLast(new Handler(redisTemplate, snowflake));
+                                    .addLast(new Handler(redisTemplate, snowflake, zkClient));
                         }
                     }).option(ChannelOption.SO_BACKLOG, 128)
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
@@ -91,8 +94,17 @@ public class Server implements Runnable, InitializingBean, ApplicationContextAwa
         this.snowflake = snowflake;
     }
 
+    public ZkClient getZkClient() {
+        return zkClient;
+    }
+
+    public void setZkClient(ZkClient zkClient) {
+        this.zkClient = zkClient;
+    }
+
     public void setApplicationContext(ApplicationContext context) throws BeansException {
         this.snowflake = context.getBean(Snowflake.class);
         this.redisTemplate = context.getBean(RedisOperations.class);
+        this.zkClient = context.getBean(ZkClient.class);
     }
 }
