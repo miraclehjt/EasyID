@@ -39,18 +39,10 @@
     </bean>
     <!-- redis配置 end -->
 
-    <!-- zookeeper client begin -->
-    <bean id="zkClient" class="com.gome.fup.easyid.zk.ZkClient" >
-        <constructor-arg index="0">
-            <value>192.168.56.102:2181</value>
-        </constructor-arg>
-    </bean>
-    <!-- zookeeper client end -->
-
     <!-- easyID client begin -->
     <bean id="easyID" class="com.gome.fup.easyid.id.EasyID" >
         <property name="redisTemplate" ref="redisTemplate" />
-        <property name="zkClient" ref="zkClient" />
+        <property name="zkAddress" value="192.168.56.102:2181" />
     </bean>
     <!-- easyID client end -->
 
