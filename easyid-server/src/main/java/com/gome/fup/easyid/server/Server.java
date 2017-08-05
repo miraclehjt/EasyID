@@ -6,6 +6,7 @@ import com.gome.fup.easyid.model.Request;
 import com.gome.fup.easyid.snowflake.Snowflake;
 import com.gome.fup.easyid.util.Constant;
 import com.gome.fup.easyid.util.IpUtil;
+import com.gome.fup.easyid.util.KryoUtil;
 import com.gome.fup.easyid.zk.ZkClient;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -20,6 +21,9 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisOperations;
 
 import java.io.Serializable;
@@ -43,6 +47,9 @@ public class Server implements Runnable, InitializingBean, ApplicationContextAwa
     private ZkClient zkClient;
 
     public void afterPropertiesSet() throws Exception {
+        //查看redis中是否有id,没有则创建
+        pushIdsInRedis();
+        //启动服务
         executorService.submit(this);
         logger.info("EasyID Server started!");
     }
@@ -76,6 +83,22 @@ public class Server implements Runnable, InitializingBean, ApplicationContextAwa
             bossGroup.shutdownGracefully();
             executorService.shutdown();
         }
+    }
+
+    private void pushIdsInRedis() {
+        redisTemplate.execute(new RedisCallback<Object>() {
+            public Object doInRedis(RedisConnection connection) throws DataAccessException {
+                byte[] key = KryoUtil.objToByte(Constant.REDIS_LIST_NAME);
+                Long len = connection.lLen(key);
+                if (len == null || len.intValue() == 0) {
+                    long[] ids = snowflake.nextIds(1000);
+                    for (long id : ids) {
+                        connection.rPush(key, KryoUtil.objToByte(id));
+                    }
+                }
+                return null;
+            }
+        });
     }
 
     public RedisOperations<Serializable, Serializable> getRedisTemplate() {
