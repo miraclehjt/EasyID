@@ -3,18 +3,31 @@ package com.gome.fup.easyid.demo;
 import com.gome.fup.easyid.id.EasyID;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /**
  * Created by fupeng-ds on 2017/8/4.
  */
 public class Main {
 
+    private static ExecutorService executorService = Executors.newFixedThreadPool(1);
+
     public static void main(String[] args) {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("classpath:spring-config.xml");
-        EasyID easyID = context.getBean(EasyID.class);
-        for (int i = 0; i < 3000; i++) {
-            long id = easyID.nextId();
-            System.out.println("EasyID nextId " + i + " : " + id);
-        }
+        final EasyID easyID = context.getBean(EasyID.class);
+        final long begen = System.currentTimeMillis();
+        do {
+            executorService.execute(new Runnable() {
+
+                public void run() {
+                    long id = easyID.nextId();
+                    System.out.println("EasyID nextId : " + id);
+                }
+            });
+        } while (System.currentTimeMillis() - begen < 1000l);
         context.close();
     }
+
+
 }
