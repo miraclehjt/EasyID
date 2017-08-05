@@ -53,10 +53,7 @@
     <!-- snowflake end -->
 
     <!-- server begin -->
-    <bean id="server" class="com.gome.fup.easyid.server.Server">
-        <property name="snowflake" ref="snowflake" />
-        <property name="redisTemplate" ref="redisTemplate" />
-    </bean>
+    <bean id="server" class="com.gome.fup.easyid.server.Server" />
     <!-- server end -->
 
     <!-- zookeeper client begin -->
