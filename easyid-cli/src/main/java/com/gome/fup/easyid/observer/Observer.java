@@ -24,6 +24,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 观察者类，监听EasyID状态变化，通知服务端创建ID
@@ -36,6 +38,8 @@ public class Observer implements InitializingBean, ApplicationContextAware{
     private EasyID easyID;
 
     private ZkClient zkClient;
+
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     public void afterPropertiesSet() throws Exception {
         //启动一个线程，来监听EasyID中flag开关的变化
@@ -95,32 +99,36 @@ public class Observer implements InitializingBean, ApplicationContextAware{
          * 访问服务端
          */
         private void send() {
-            EventLoopGroup group = new NioEventLoopGroup();
-            try {
-                Bootstrap bootstrap = new Bootstrap();
-                bootstrap.group(group).channel(NioSocketChannel.class)
-                        .handler(new ChannelInitializer<SocketChannel>() {
+            executorService.submit(new Runnable() {
+                public void run() {
+                    EventLoopGroup group = new NioEventLoopGroup();
+                    try {
+                        Bootstrap bootstrap = new Bootstrap();
+                        bootstrap.group(group).channel(NioSocketChannel.class)
+                                .handler(new ChannelInitializer<SocketChannel>() {
 
-                            @Override
-                            protected void initChannel(SocketChannel ch)
-                                    throws Exception {
-                                ch.pipeline()
-                                        .addLast(new EncoderHandler());
-                            }
-                        }).option(ChannelOption.SO_KEEPALIVE, true);
-                // 链接服务器
-                ChannelFuture future = bootstrap.connect(host, port).sync();
-                // 将request对象写入outbundle处理后发出
-                future.channel().writeAndFlush(new Request(MessageType.REQUEST_TYPE_CREATE)).sync();
-                // 服务器同步连接断开时,这句代码才会往下执行
-                future.channel().closeFuture().sync();
+                                    @Override
+                                    protected void initChannel(SocketChannel ch)
+                                            throws Exception {
+                                        ch.pipeline()
+                                                .addLast(new EncoderHandler());
+                                    }
+                                }).option(ChannelOption.SO_KEEPALIVE, true);
+                        // 链接服务器
+                        ChannelFuture future = bootstrap.connect(host, port).sync();
+                        // 将request对象写入outbundle处理后发出
+                        future.channel().writeAndFlush(new Request(MessageType.REQUEST_TYPE_CREATE)).sync();
+                        // 服务器同步连接断开时,这句代码才会往下执行
+                        future.channel().closeFuture().sync();
 
-            } catch (Exception e) {
-                e.printStackTrace();
-                logger.equals(e.getMessage());
-            } finally {
-                group.shutdownGracefully();
-            }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        logger.equals(e.getMessage());
+                    } finally {
+                        group.shutdownGracefully();
+                    }
+                }
+            });
         }
 
         public String getHost() {
