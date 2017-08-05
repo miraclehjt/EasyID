@@ -11,7 +11,7 @@ import java.util.concurrent.Executors;
  */
 public class Main {
 
-    private static ExecutorService executorService = Executors.newFixedThreadPool(1);
+    private static ExecutorService executorService = Executors.newFixedThreadPool(8);
 
     public static void main(String[] args) {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("classpath:spring-config.xml");
@@ -26,6 +26,10 @@ public class Main {
                 }
             });
         } while (System.currentTimeMillis() - begen < 1000l);
+        /*for (int i = 0; i < 1500; i++) {
+            long id = easyID.nextId();
+            System.out.println("EasyID nextId : " + id);
+        }*/
         context.close();
     }
 
