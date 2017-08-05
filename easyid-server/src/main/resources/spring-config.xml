@@ -6,12 +6,16 @@
          http://www.springframework.org/schema/context
          http://www.springframework.org/schema/context/spring-context-4.0.xsd">
 
+    <context:annotation-config/>
+
+    <context:component-scan base-package="com.gome.fup.easyid" />
+
     <!-- 引入配置文件 -->
     <bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
         <property name="locations">
-            <array>
+            <list>
                 <value>classpath:config.properties</value>
-            </array>
+            </list>
         </property>
     </bean>
 
@@ -48,17 +52,4 @@
     </bean>
     <!-- redis配置 end -->
 
-    <!-- snowflake begin -->
-    <bean id="snowflake" class="com.gome.fup.easyid.snowflake.Snowflake" />
-    <!-- snowflake end -->
-
-    <!-- server begin -->
-    <bean id="server" class="com.gome.fup.easyid.server.Server" />
-    <!-- server end -->
-
-    <!-- zookeeper client begin -->
-    <bean id="zkClient" class="com.gome.fup.easyid.zk.ZkClient">
-        <property name="address" value="${easyid.zookeeper.address}" />
-    </bean>
-    <!-- zookeeper client end -->
 </beans>
