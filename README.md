@@ -37,7 +37,7 @@ EasyID是一个以snowflake算法为基础的轻量、高效的分布式主键�
 # 客户端
 
   添加easy-cli项目的依赖；<br/>
-  在spring配置文件中配置EasyID、ZkClient、Observer类，参考easy-demo项目的配置；<br/>
+  在spring配置文件中配置EasyID、ZkClient，参考easy-demo项目的配置；<br/>
   通过EasyID类的nextId()，获取id。<br/>
   
 
