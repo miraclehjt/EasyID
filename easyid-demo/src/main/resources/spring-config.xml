@@ -54,8 +54,4 @@
     </bean>
     <!-- easyID client end -->
 
-    <!-- observer begin -->
-    <bean id="observer" class="com.gome.fup.easyid.observer.Observer" />
-    <!-- observer end -->
-
 </beans>
