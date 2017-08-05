@@ -68,8 +68,19 @@ public class ZkClient extends AbstractZkClient {
      * @throws KeeperException
      * @throws InterruptedException
      */
-    private boolean hasRegisted(String node) throws KeeperException, InterruptedException {
-        return zooKeeper.exists(getNodePath(node), false) == null ? false : true;
+    private boolean hasRegisted(String node) throws InterruptedException, IOException {
+        try {
+            return zooKeeper.exists(getNodePath(node), false) == null ? false : true;
+        } catch (KeeperException e) {
+            logger.error("zookeeper session time out!");
+            logger.error(e.getMessage());
+            zooKeeper = new ZooKeeper(address, SESSIONTIMEOUT, new Watcher() {
+                public void process(WatchedEvent event) {
+                    logger.info("zookeeper type : " + event.getType() + ", and state" + event.getState());
+                }
+            });
+            return hasRegisted(node);
+        }
     }
 
     /**
