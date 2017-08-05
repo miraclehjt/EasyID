@@ -24,11 +24,10 @@ EasyID是一个以snowflake算法为基础的轻量、高效的分布式主键�
   
 # 服务部署
 
-  在easyid-server中的conf.properties文件中，配置redis和zookeeper信息；<br/>
-  使用maven命令打包easyid-server:mvn clean instll -Dmaven.test.skip=true；<br/>
-  部署easyid-server：java -jar EasyID-Server-1.0-SNAPSHOT.jar -workerid10 -datacenterid11；<br/>
-  
-  参数说明：<br/>
+ - 在easyid-server中的conf.properties文件中，配置redis和zookeeper信息；<br/>
+ - 使用maven命令打包easyid-server:mvn clean instll -Dmaven.test.skip=true；<br/>
+ - 部署easyid-server：java -jar EasyID-Server-1.0-SNAPSHOT.jar -workerid10 -datacenterid11；<br/>
+ - 参数说明：<br/>
     -workerid：工作ID，取值1至31；<br/>
     -datacenterid：数据中心ID，取值1至31；<br/>
     若不指定参数，默认workerid为10，datacenterid为11。<br/>
@@ -37,9 +36,9 @@ EasyID是一个以snowflake算法为基础的轻量、高效的分布式主键�
 
 # 客户端
 
-  添加easy-cli项目的依赖；<br/>
-  在spring配置文件中配置EasyID、RedisTemplate，参考easy-demo项目的配置；<br/>
-  通过EasyID类的nextId()，获取id。<br/>
+ - 添加easy-cli项目的依赖；<br/>
+ - 在spring配置文件中配置EasyID、RedisTemplate，参考easy-demo项目的配置；<br/>
+ - 通过EasyID类的nextId()，获取id。<br/>
   
 
 
