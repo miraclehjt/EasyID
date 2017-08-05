@@ -22,10 +22,12 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.TimeoutUtils;
 
 import java.io.Serializable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 客户端ID生成类
@@ -47,9 +49,11 @@ public class EasyID {
 
     private RedisOperations<Serializable, Serializable> redisTemplate;
 
-    private ExecutorService executorService = Executors.newFixedThreadPool(8);
+    private ExecutorService executorService = Executors.newFixedThreadPool(4);
 
     private ZkClient zkClient;
+
+    private final Object obj = new Object();
 
     /**
      * 获取id
@@ -71,33 +75,56 @@ public class EasyID {
             public Long[] doInRedis(RedisConnection connection) throws DataAccessException {
                 try {
                     Long[] ids = new Long[count];
-                    Long len = connection.lLen(key);
-                    if (len < REDIS_LIST_MIN_SIZE) {
-                        if (connection.setNX(KryoUtil.objToByte(Constant.REDIS_SETNX_KEY), KryoUtil.objToByte(1))) {    //获得redis锁
-                            //设置redis锁的有效时间3秒
-                            connection.expire(KryoUtil.objToByte(Constant.REDIS_SETNX_KEY),3l);
-                            //发送创建ID的请求到服务端
-                            send();
+                    synchronized (obj) {
+                        Long len = connection.lLen(key);
+                        byte[] setnex_key = KryoUtil.objToByte(Constant.REDIS_SETNX_KEY);
+                        if (len < REDIS_LIST_MIN_SIZE) {
+                            getRedisLock(connection, setnex_key);
+                            logger.info("ids in redis less then 300");
                         }
-                        logger.info("ids in redis less then 300");
-                    }
-                    if (count > len.intValue()) {
-                        throw new NoMoreValueInRedisException("没有足够的值");
-                    }
-                    for (int i = 0; i < count; i++) {
-                        byte[] bytes = connection.lPop(key);
-                        ids[i] = KryoUtil.byteToObj(bytes, Long.class);
+                        if (len == 0l) {
+                            if (connection.exists(setnex_key)) {
+                                Thread.sleep(500);
+                            } else {
+                                getRedisLock(connection, setnex_key);
+                            }
+                            return nextIds(count);
+                        }
+                        if (count > len.intValue()) {
+                            logger.error("count:" + count + ",len:" + len.intValue());
+                            throw new NoMoreValueInRedisException("没有足够的值");
+                        }
+                        for (int i = 0; i < count; i++) {
+                            byte[] bytes = connection.lPop(key);
+                            ids[i] = KryoUtil.byteToObj(bytes, Long.class);
+                        }
                     }
                     return ids;
                 } catch (KeeperException e) {
-                    e.printStackTrace();
-                    logger.error(e.getMessage());
+                    logger.error(e);
                 } catch (InterruptedException e) {
-                    logger.error(e.getMessage());
+                    logger.error(e);
                 }
                 return null;
             }
         });
+    }
+
+    /**
+     * 获取redis锁；若获得，则发送消息到服务端
+     * @param connection
+     * @param setnex_key
+     * @throws KeeperException
+     * @throws InterruptedException
+     */
+    private void getRedisLock(RedisConnection connection, byte[] setnex_key) throws KeeperException, InterruptedException {
+        if (connection.setNX(setnex_key, KryoUtil.objToByte(1))) {    //获得redis锁
+            logger.info("get redis synchronized!");
+            //设置redis锁的有效时间3秒
+            connection.expire(setnex_key, TimeoutUtils.toMillis(3l, TimeUnit.SECONDS));
+            //发送创建ID的请求到服务端
+            send();
+        }
     }
 
     /**
@@ -131,8 +158,7 @@ public class EasyID {
                     future.channel().closeFuture().sync();
 
                 } catch (Exception e) {
-                    e.printStackTrace();
-                    logger.equals(e.getMessage());
+                    logger.error(e);
                 } finally {
                     group.shutdownGracefully();
                 }
