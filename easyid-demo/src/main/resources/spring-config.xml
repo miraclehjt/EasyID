@@ -50,6 +50,7 @@
     <!-- easyID client begin -->
     <bean id="easyID" class="com.gome.fup.easyid.id.EasyID" >
         <property name="redisTemplate" ref="redisTemplate" />
+        <property name="zkClient" ref="zkClient" />
     </bean>
     <!-- easyID client end -->
 
