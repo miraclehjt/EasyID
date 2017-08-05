@@ -19,12 +19,16 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.apache.log4j.Logger;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.stereotype.Component;
 
 import java.io.Serializable;
 import java.util.concurrent.ExecutorService;
@@ -34,17 +38,25 @@ import java.util.concurrent.Executors;
  * 服务端，接收创建id的请求
  * Created by fupeng-ds on 2017/8/2.
  */
-public class Server implements Runnable, InitializingBean, ApplicationContextAware{
+@Component
+public class Server implements Runnable, InitializingBean {
 
     private static final Logger logger = Logger.getLogger(Server.class);
 
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
+    @Autowired
     private RedisOperations<Serializable, Serializable> redisTemplate;
 
+    @Autowired
     private Snowflake snowflake;
 
+    @Autowired
     private ZkClient zkClient;
+
+    //@Value("#{configProperties['easyid.redis.list.size']}")
+    @Value("${easyid.redis.list.size}")
+    private int redis_list_size;
 
     public void afterPropertiesSet() throws Exception {
         //查看redis中是否有id,没有则创建
@@ -69,7 +81,7 @@ public class Server implements Runnable, InitializingBean, ApplicationContextAwa
                                 throws Exception {
                             socketChannel.pipeline()
                                     .addLast(new DecoderHandler(Request.class))
-                                    .addLast(new Handler(redisTemplate, snowflake, zkClient));
+                                    .addLast(new Handler(redisTemplate, snowflake, zkClient, redis_list_size));
                         }
                     }).option(ChannelOption.SO_BACKLOG, 128)
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
@@ -91,7 +103,7 @@ public class Server implements Runnable, InitializingBean, ApplicationContextAwa
                 byte[] key = KryoUtil.objToByte(Constant.REDIS_LIST_NAME);
                 Long len = connection.lLen(key);
                 if (len == null || len.intValue() == 0) {
-                    long[] ids = snowflake.nextIds(1000);
+                    long[] ids = snowflake.nextIds(redis_list_size);
                     for (long id : ids) {
                         connection.rPush(key, KryoUtil.objToByte(id));
                     }
@@ -125,9 +137,4 @@ public class Server implements Runnable, InitializingBean, ApplicationContextAwa
         this.zkClient = zkClient;
     }
 
-    public void setApplicationContext(ApplicationContext context) throws BeansException {
-        this.snowflake = context.getBean(Snowflake.class);
-        this.redisTemplate = context.getBean(RedisOperations.class);
-        this.zkClient = context.getBean(ZkClient.class);
-    }
 }

@@ -1,9 +1,12 @@
 package com.gome.fup.easyid.snowflake;
 
+import org.springframework.stereotype.Component;
+
 /**
  * 基于Snowflake算法生成ID
  * Created by fupeng-ds on 2017/8/2.
  */
+@Component
 public class Snowflake {
 
     /** 开始时间截 (2015-01-01) */

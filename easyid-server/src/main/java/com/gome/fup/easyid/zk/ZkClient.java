@@ -5,6 +5,8 @@ import com.gome.fup.easyid.util.ConversionUtil;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
@@ -12,10 +14,12 @@ import java.io.IOException;
  * ZooKeeper客户端类，在ZooKeeper上注册服务信息，并实现负载均衡
  * Created by fupeng-ds on 2017/8/3.
  */
+@Component
 public class ZkClient extends AbstractZkClient {
 
     private static final Logger logger = Logger.getLogger(ZkClient.class);
 
+    @Value("${easyid.zookeeper.address}")
     private String address;
 
     public ZkClient() {

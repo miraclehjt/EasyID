@@ -29,7 +29,7 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
 
     private ZkClient zkClient;
 
-    private final Object obj = new Object();
+    private int redis_list_size;
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Request request) throws Exception {
@@ -42,7 +42,7 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
                     Long len = connection.lLen(key);
                     if (null == len) len = 0l;
                     //批量生成id
-                    long[] ids = snowflake.nextIds(1000 - len.intValue());
+                    long[] ids = snowflake.nextIds(redis_list_size - len.intValue());
                     //将生成的id存入redis队列
                     for (long id : ids) {
                         connection.rPush(key, KryoUtil.objToByte(id));
@@ -57,10 +57,11 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
         }
     }
 
-    public Handler(RedisOperations<Serializable, Serializable> redisTemplate, Snowflake snowflake, ZkClient zkClient) {
+    public Handler(RedisOperations<Serializable, Serializable> redisTemplate, Snowflake snowflake, ZkClient zkClient, int redis_list_size) {
         this.redisTemplate = redisTemplate;
         this.snowflake = snowflake;
         this.zkClient = zkClient;
+        this.redis_list_size = redis_list_size;
     }
 
     public RedisOperations<Serializable, Serializable> getRedisTemplate() {
@@ -87,4 +88,11 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
         this.zkClient = zkClient;
     }
 
+    public int getRedis_list_size() {
+        return redis_list_size;
+    }
+
+    public void setRedis_list_size(int redis_list_size) {
+        this.redis_list_size = redis_list_size;
+    }
 }
