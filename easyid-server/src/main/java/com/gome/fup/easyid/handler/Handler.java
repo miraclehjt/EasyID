@@ -29,6 +29,8 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
 
     private ZkClient zkClient;
 
+    private final Object obj = new Object();
+
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Request request) throws Exception {
         if (request.getType() == MessageType.REQUEST_TYPE_CREATE) {
@@ -38,12 +40,15 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
                 public Object doInRedis(RedisConnection connection) throws DataAccessException {
                     byte[] key = KryoUtil.objToByte(Constant.REDIS_LIST_NAME);
                     Long len = connection.lLen(key);
+                    if (null == len) len = 0l;
                     //批量生成id
                     long[] ids = snowflake.nextIds(1000 - len.intValue());
                     //将生成的id存入redis队列
                     for (long id : ids) {
                         connection.rPush(key, KryoUtil.objToByte(id));
                     }
+                    //释放redis锁
+                    connection.del(KryoUtil.objToByte(Constant.REDIS_SETNX_KEY));
                     return null;
                 }
             });
@@ -81,4 +86,5 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
     public void setZkClient(ZkClient zkClient) {
         this.zkClient = zkClient;
     }
+
 }
