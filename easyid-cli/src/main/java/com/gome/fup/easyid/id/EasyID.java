@@ -1,15 +1,31 @@
 package com.gome.fup.easyid.id;
 
 import com.gome.fup.easyid.exception.NoMoreValueInRedisException;
+import com.gome.fup.easyid.handler.EncoderHandler;
+import com.gome.fup.easyid.model.Request;
 import com.gome.fup.easyid.util.Constant;
+import com.gome.fup.easyid.util.IpUtil;
 import com.gome.fup.easyid.util.KryoUtil;
+import com.gome.fup.easyid.util.MessageType;
+import com.gome.fup.easyid.zk.ZkClient;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.KeeperException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisOperations;
 
 import java.io.Serializable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 客户端ID生成类
@@ -31,11 +47,16 @@ public class EasyID {
 
     private RedisOperations<Serializable, Serializable> redisTemplate;
 
+    private ExecutorService executorService = Executors.newFixedThreadPool(8);
+
+    private ZkClient zkClient;
+
     /**
      * 获取id
      * @return
      */
     public long nextId() {
+        if (nextIds(1) == null) throw new NullPointerException();
         return nextIds(1)[0];
     }
 
@@ -45,36 +66,79 @@ public class EasyID {
      * @return
      */
     public Long[] nextIds(final int count) {
+        final byte[] key = KryoUtil.objToByte(Constant.REDIS_LIST_NAME);
         return redisTemplate.execute(new RedisCallback<Long[]>() {
             public Long[] doInRedis(RedisConnection connection) throws DataAccessException {
-                byte[] key = KryoUtil.objToByte(Constant.REDIS_LIST_NAME);
-                Long len = connection.lLen(key);
-                if (len < REDIS_LIST_MIN_SIZE) {
-                    //打开开关，服务端需要生产更多的id
-                    flag = true;
-                    if (len.intValue() == 0) {
-                        logger.info("no id in redis!");
-                        while (true) {
-                            Long l = connection.lLen(key);
-                            if (l > 0) {
-                                len = l;
-                                break;
-                            }
+                try {
+                    Long[] ids = new Long[count];
+                    Long len = connection.lLen(key);
+                    if (len < REDIS_LIST_MIN_SIZE) {
+                        if (connection.setNX(KryoUtil.objToByte(Constant.REDIS_SETNX_KEY), KryoUtil.objToByte(1))) {    //获得redis锁
+                            //设置redis锁的有效时间3秒
+                            connection.expire(KryoUtil.objToByte(Constant.REDIS_SETNX_KEY),3l);
+                            //发送创建ID的请求到服务端
+                            send();
                         }
+                        logger.info("ids in redis less then 300");
                     }
-                    logger.info("ids in redis less then 300");
+                    if (count > len.intValue()) {
+                        throw new NoMoreValueInRedisException("没有足够的值");
+                    }
+                    for (int i = 0; i < count; i++) {
+                        byte[] bytes = connection.lPop(key);
+                        ids[i] = KryoUtil.byteToObj(bytes, Long.class);
+                    }
+                    return ids;
+                } catch (KeeperException e) {
+                    e.printStackTrace();
+                    logger.error(e.getMessage());
+                } catch (InterruptedException e) {
+                    logger.error(e.getMessage());
                 }
-                if (count > len.intValue()) {
-                    throw new NoMoreValueInRedisException("没有足够的值");
-                }
-                Long[] ids = new Long[count];
-                for (int i = 0; i < count; i++) {
-                    byte[] bytes = connection.lPop(key);
-                    ids[i] = KryoUtil.byteToObj(bytes, Long.class);
-                }
-                return ids;
+                return null;
             }
         });
+    }
+
+    /**
+     * 开启另外的线程，访问服务端
+     */
+    private void send() throws KeeperException, InterruptedException {
+        //通过zookeeper的负载均衡算法，获取服务端ip地址
+        String ip = zkClient.balance();
+        final String host = IpUtil.getHost(ip);
+        final int port = Constant.EASYID_SERVER_PORT;
+        executorService.submit(new Runnable() {
+            public void run() {
+                EventLoopGroup group = new NioEventLoopGroup();
+                try {
+                    Bootstrap bootstrap = new Bootstrap();
+                    bootstrap.group(group).channel(NioSocketChannel.class)
+                            .handler(new ChannelInitializer<SocketChannel>() {
+
+                                @Override
+                                protected void initChannel(SocketChannel ch)
+                                        throws Exception {
+                                    ch.pipeline()
+                                            .addLast(new EncoderHandler());
+                                }
+                            }).option(ChannelOption.SO_KEEPALIVE, true);
+                    // 链接服务器
+                    ChannelFuture future = bootstrap.connect(host, port).sync();
+                    // 将request对象写入outbundle处理后发出
+                    future.channel().writeAndFlush(new Request(MessageType.REQUEST_TYPE_CREATE)).sync();
+                    // 服务器同步连接断开时,这句代码才会往下执行
+                    future.channel().closeFuture().sync();
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    logger.equals(e.getMessage());
+                } finally {
+                    group.shutdownGracefully();
+                }
+            }
+        });
+
     }
 
     public RedisOperations<Serializable, Serializable> getRedisTemplate() {
@@ -91,5 +155,13 @@ public class EasyID {
 
     public void setFlag(boolean flag) {
         this.flag = flag;
+    }
+
+    public ZkClient getZkClient() {
+        return zkClient;
+    }
+
+    public void setZkClient(ZkClient zkClient) {
+        this.zkClient = zkClient;
     }
 }
