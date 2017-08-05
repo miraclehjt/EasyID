@@ -81,14 +81,10 @@ public class EasyID {
                         if (len < REDIS_LIST_MIN_SIZE) {
                             getRedisLock(connection, setnex_key);
                             logger.info("ids in redis less then 300");
-                        }
-                        if (len == 0l) {
-                            if (connection.exists(setnex_key)) {
-                                Thread.sleep(500);
-                            } else {
-                                getRedisLock(connection, setnex_key);
+                            if (len == 0l) {
+                                //synchronized为可重入锁，允许递归调用
+                                return nextIds(count);
                             }
-                            return nextIds(count);
                         }
                         if (count > len.intValue()) {
                             logger.error("count:" + count + ",len:" + len.intValue());
