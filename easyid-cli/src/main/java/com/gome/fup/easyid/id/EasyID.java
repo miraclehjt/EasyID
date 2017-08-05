@@ -18,6 +18,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisCallback;
@@ -33,7 +34,7 @@ import java.util.concurrent.TimeUnit;
  * 客户端ID生成类
  * Created by fupeng-ds on 2017/8/3.
  */
-public class EasyID {
+public class EasyID implements InitializingBean{
 
     private static final Logger logger = Logger.getLogger(EasyID.class);
 
@@ -54,6 +55,11 @@ public class EasyID {
     private ZkClient zkClient;
 
     private final Object obj = new Object();
+
+    /**
+     *ZooKeeper服务地址
+     */
+    protected String zkAddress;
 
     /**
      * 获取id
@@ -185,5 +191,18 @@ public class EasyID {
 
     public void setZkClient(ZkClient zkClient) {
         this.zkClient = zkClient;
+    }
+
+    public String getZkAddress() {
+        return zkAddress;
+    }
+
+    public void setZkAddress(String zkAddress) {
+        this.zkAddress = zkAddress;
+    }
+
+    public void afterPropertiesSet() throws Exception {
+        //初始化ZkClient
+        this.zkClient = new ZkClient(zkAddress);
     }
 }
