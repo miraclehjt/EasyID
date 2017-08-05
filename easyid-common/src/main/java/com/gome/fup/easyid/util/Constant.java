@@ -15,4 +15,9 @@ public class Constant {
      */
     public static final String REDIS_LIST_NAME = "EasyID";
 
+    /**
+     * redis锁key值
+     */
+    public static final String REDIS_SETNX_KEY = "EasyID_REDIS_SETNX_KEY";
+
 }
