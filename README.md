@@ -24,7 +24,7 @@ EasyID是一个以snowflake算法为基础的轻量、高效的分布式主键�
   
 # 系统架构
 
-  
+   ![image](https://github.com/fup1990/EasyID/blob/master/EasyID%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84%E5%9B%BE.png)
   
 # 服务部署
 
