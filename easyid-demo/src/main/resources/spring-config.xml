@@ -8,8 +8,8 @@
 
     <!-- redis配置 begin -->
     <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
-        <property name="maxIdle" value="1" />
-        <property name="maxTotal" value="5" />
+        <property name="maxIdle" value="8" />
+        <property name="maxTotal" value="32" />
         <property name="blockWhenExhausted" value="true" />
         <property name="maxWaitMillis" value="30000" />
         <property name="testOnBorrow" value="true" />
