@@ -13,7 +13,7 @@
         <dependency>
             <groupId>com.gome.fup.easyid</groupId>
             <artifactId>EasyID-Common</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>STABLE-1.0</version>
         </dependency>
         <!-- log4j -->
         <dependency>
