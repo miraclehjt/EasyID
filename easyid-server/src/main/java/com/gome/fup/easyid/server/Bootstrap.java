@@ -28,8 +28,6 @@ public class Bootstrap {
                 analysis(context, arg);
             }
         }
-        ZkClient client = context.getBean(ZkClient.class);
-        client.register(IpUtil.getLocalHost());
     }
 
     /**
@@ -42,11 +40,6 @@ public class Bootstrap {
      * @param arg
      */
     private static void analysis(ClassPathXmlApplicationContext context, String arg) {
-        if (arg.contains("-zk")) {
-            String[] split = arg.split("-zk");
-            ZkClient client = context.getBean(ZkClient.class);
-            client.setAddress(split[1]);
-        }
         if (arg.contains("-workerid")) {
             String[] split = arg.split("-workerid");
             Snowflake snowflake = context.getBean(Snowflake.class);
@@ -58,5 +51,4 @@ public class Bootstrap {
             snowflake.setDatacenterId(Long.parseLong(split[1]));
         }
     }
-
 }
