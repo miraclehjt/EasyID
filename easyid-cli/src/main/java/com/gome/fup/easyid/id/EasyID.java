@@ -116,7 +116,7 @@ public class EasyID implements InitializingBean{
         if (connection.setNX(setnex_key, KryoUtil.objToByte(1))) {    //获得redis锁
             logger.info("get redis synchronized!");
             //设置redis锁的有效时间3秒
-            connection.expire(setnex_key, TimeoutUtils.toMillis(3l, TimeUnit.SECONDS));
+            connection.pExpire(setnex_key, TimeoutUtils.toMillis(5l, TimeUnit.SECONDS));
             //发送创建ID的请求到服务端
             send();
         }
