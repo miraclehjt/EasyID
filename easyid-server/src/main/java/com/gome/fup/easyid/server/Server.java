@@ -4,6 +4,7 @@ import com.gome.fup.easyid.handler.DecoderHandler;
 import com.gome.fup.easyid.handler.Handler;
 import com.gome.fup.easyid.model.Request;
 import com.gome.fup.easyid.snowflake.Snowflake;
+import com.gome.fup.easyid.util.Cache;
 import com.gome.fup.easyid.util.Constant;
 import com.gome.fup.easyid.util.IpUtil;
 import com.gome.fup.easyid.util.KryoUtil;
@@ -17,6 +18,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.KeeperException;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,7 @@ import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.stereotype.Component;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -54,8 +57,6 @@ public class Server implements Runnable, InitializingBean {
     @Autowired
     private ZkClient zkClient;
 
-    //@Value("#{configProperties['easyid.redis.list.size']}")
-    @Value("${easyid.redis.list.size}")
     private int redis_list_size;
 
     public void afterPropertiesSet() throws Exception {
@@ -81,7 +82,7 @@ public class Server implements Runnable, InitializingBean {
                                 throws Exception {
                             socketChannel.pipeline()
                                     .addLast(new DecoderHandler(Request.class))
-                                    .addLast(new Handler(redisTemplate, snowflake, zkClient, redis_list_size));
+                                    .addLast(new Handler(redisTemplate, snowflake, zkClient));
                         }
                     }).option(ChannelOption.SO_BACKLOG, 128)
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
@@ -97,7 +98,9 @@ public class Server implements Runnable, InitializingBean {
         }
     }
 
-    private void pushIdsInRedis() {
+    private void pushIdsInRedis() throws KeeperException, InterruptedException {
+        //从zookeeper中获取队列长度参数
+        redis_list_size = zkClient.getRedisListSize() * 1000;
         redisTemplate.execute(new RedisCallback<Object>() {
             public Object doInRedis(RedisConnection connection) throws DataAccessException {
                 byte[] key = KryoUtil.objToByte(Constant.REDIS_LIST_NAME);
@@ -137,4 +140,11 @@ public class Server implements Runnable, InitializingBean {
         this.zkClient = zkClient;
     }
 
+    public int getRedis_list_size() {
+        return redis_list_size;
+    }
+
+    public void setRedis_list_size(int redis_list_size) {
+        this.redis_list_size = redis_list_size;
+    }
 }

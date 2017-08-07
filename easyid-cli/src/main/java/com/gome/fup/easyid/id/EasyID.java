@@ -3,10 +3,7 @@ package com.gome.fup.easyid.id;
 import com.gome.fup.easyid.exception.NoMoreValueInRedisException;
 import com.gome.fup.easyid.handler.EncoderHandler;
 import com.gome.fup.easyid.model.Request;
-import com.gome.fup.easyid.util.Constant;
-import com.gome.fup.easyid.util.IpUtil;
-import com.gome.fup.easyid.util.KryoUtil;
-import com.gome.fup.easyid.util.MessageType;
+import com.gome.fup.easyid.util.*;
 import com.gome.fup.easyid.zk.ZkClient;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -37,11 +34,6 @@ import java.util.concurrent.TimeUnit;
 public class EasyID implements InitializingBean{
 
     private static final Logger logger = Logger.getLogger(EasyID.class);
-
-    /**
-     * redis队列中最低ID数量，低于此数量时，服务端开始生成新的ID并存入redis队列
-     */
-    private final long REDIS_LIST_MIN_SIZE = 300l;
 
     /**
      * 服务端开始生成新的ID的开关
@@ -81,10 +73,11 @@ public class EasyID implements InitializingBean{
             public Long[] doInRedis(RedisConnection connection) throws DataAccessException {
                 try {
                     Long[] ids = new Long[count];
+                    int list_min_size = zkClient.getRedisListSize() * 300;
                     synchronized (obj) {
                         Long len = connection.lLen(key);
                         byte[] setnex_key = KryoUtil.objToByte(Constant.REDIS_SETNX_KEY);
-                        if (len < REDIS_LIST_MIN_SIZE) {
+                        if (len < list_min_size) {
                             getRedisLock(connection, setnex_key);
                             logger.info("ids in redis less then 300");
                             if (len == 0l) {
