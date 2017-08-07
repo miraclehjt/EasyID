@@ -32,12 +32,12 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Request request) throws Exception {
         if (request.getType() == MessageType.REQUEST_TYPE_CREATE) {
-             final int redis_list_size = zkClient.getRedisListSize() * 1000;
-            String ip = IpUtil.getLocalHost();
-            zkClient.increase(ip);
-            redisTemplate.execute(new RedisCallback<Object>() {
-                public Object doInRedis(RedisConnection connection) throws DataAccessException {
-                    try {
+            try {
+                final int redis_list_size = zkClient.getRedisListSize() * 1000;
+                String ip = IpUtil.getLocalHost();
+                zkClient.increase(ip);
+                redisTemplate.execute(new RedisCallback<Object>() {
+                    public Object doInRedis(RedisConnection connection) throws DataAccessException {
                         byte[] key = KryoUtil.objToByte(Constant.REDIS_LIST_NAME);
                         Long len = connection.lLen(key);
                         if (null == len) len = 0l;
@@ -47,13 +47,17 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
                         for (long id : ids) {
                             connection.rPush(key, KryoUtil.objToByte(id));
                         }
-                    } finally {
-                        //释放redis锁
-                        connection.del(KryoUtil.objToByte(Constant.REDIS_SETNX_KEY));
+                        return null;
                     }
-                    return null;
-                }
-            });
+                });
+            } finally {
+                redisTemplate.execute(new RedisCallback<Object>() {
+                    public Object doInRedis(RedisConnection connection) throws DataAccessException {
+                         //释放redis锁
+                        return connection.del(KryoUtil.objToByte(Constant.REDIS_SETNX_KEY));
+                    }
+                });
+            }
             //zkClient.decrease(ip);
             ctx.writeAndFlush("").addListener(ChannelFutureListener.CLOSE);
         }
