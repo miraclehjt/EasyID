@@ -103,12 +103,12 @@ public class Server implements Runnable, InitializingBean {
         redis_list_size = zkClient.getRedisListSize() * 1000;
         redisTemplate.execute(new RedisCallback<Object>() {
             public Object doInRedis(RedisConnection connection) throws DataAccessException {
-                byte[] key = KryoUtil.objToByte(Constant.REDIS_LIST_NAME);
+                byte[] key = Constant.REDIS_LIST_NAME.getBytes();
                 Long len = connection.lLen(key);
                 if (len == null || len.intValue() == 0) {
                     long[] ids = snowflake.nextIds(redis_list_size);
                     for (long id : ids) {
-                        connection.rPush(key, KryoUtil.objToByte(id));
+                        connection.rPush(key, String.valueOf(id).getBytes());
                     }
                 }
                 return null;

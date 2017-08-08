@@ -68,7 +68,7 @@ public class EasyID implements InitializingBean{
      * @return
      */
     public Long[] nextIds(final int count) {
-        final byte[] key = KryoUtil.objToByte(Constant.REDIS_LIST_NAME);
+        final byte[] key = Constant.REDIS_LIST_NAME.getBytes();
         return redisTemplate.execute(new RedisCallback<Long[]>() {
             public Long[] doInRedis(RedisConnection connection) throws DataAccessException {
                 try {
@@ -76,9 +76,8 @@ public class EasyID implements InitializingBean{
                     int list_min_size = zkClient.getRedisListSize() * 300;
                     synchronized (obj) {
                         Long len = connection.lLen(key);
-                        byte[] setnex_key = KryoUtil.objToByte(Constant.REDIS_SETNX_KEY);
                         if (len < list_min_size) {
-                            getRedisLock(connection, setnex_key);
+                            getRedisLock(connection, Constant.REDIS_SETNX_KEY.getBytes());
                             logger.info("ids in redis less then 300");
                             if (len == 0l) {
                                 //synchronized为可重入锁，允许递归调用
@@ -91,7 +90,7 @@ public class EasyID implements InitializingBean{
                         }
                         for (int i = 0; i < count; i++) {
                             byte[] bytes = connection.lPop(key);
-                            ids[i] = KryoUtil.byteToObj(bytes, Long.class);
+                            ids[i] = Long.valueOf(new String(bytes));
                         }
                     }
                     return ids;
@@ -113,7 +112,7 @@ public class EasyID implements InitializingBean{
      * @throws InterruptedException
      */
     private void getRedisLock(RedisConnection connection, byte[] setnex_key) throws KeeperException, InterruptedException {
-        if (connection.setNX(setnex_key, KryoUtil.objToByte(1))) {    //获得redis锁
+        if (connection.setNX(setnex_key, "1".getBytes())) {    //获得redis锁
             logger.info("get redis synchronized!");
             //设置redis锁的有效时间3秒
             connection.pExpire(setnex_key, TimeoutUtils.toMillis(5l, TimeUnit.SECONDS));
