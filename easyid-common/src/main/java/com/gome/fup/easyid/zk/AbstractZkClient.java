@@ -84,11 +84,12 @@ public abstract class AbstractZkClient {
     public int getRedisListSize() {
         int size;
         if (Cache.hasKey(Constant.REDIS_LIST_SIZE)) {
-            size = (Integer) Cache.get(Constant.REDIS_LIST_SIZE);
+            size =  (Integer)Cache.get(Constant.REDIS_LIST_SIZE);
         } else {
             try {
                 size = this.getRootChildren();
-                Cache.set(Constant.REDIS_LIST_SIZE, size);
+                //设置有效时间60s
+                Cache.set(Constant.REDIS_LIST_SIZE, size,60);
             } catch (Exception e) {
                 logger.error(e);
                 size = 1;

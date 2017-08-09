@@ -4,53 +4,61 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
  * 缓存类
- * 单例
+ * 自定义实现有效期控制
  * @author fupeng-ds
  */
 public class Cache {
 
-	private static LoadingCache<String, Object> loadingCache;
+	private static Map<String, Long> expire = new ConcurrentHashMap<String, Long>();
 
-	static {
-		loadingCache = CacheBuilder
-				.newBuilder()
-				.maximumSize(1000)
-				.expireAfterWrite(60, TimeUnit.SECONDS)		//设值缓存有效时间，60秒
-				.build(new CacheLoader<String, Object>() {
+	private static Map<String, Object> cache = new ConcurrentHashMap<String, Object>();
 
-					@Override
-					public Object load(String key) throws Exception {
-						return loadingCache.get(key);
-					}
-				});
-	}
-	
+	/**
+	 * 默认有效时间30分钟
+	 */
+	private static final long EXPIRE = 1800;
+
 	public static void set(String key, Object value) {
-		loadingCache.put(key, value);
+		cache.put(key, value);
+		expire.put(key, System.currentTimeMillis() + EXPIRE);
 	}
-	
+
 	public static Object get(String key) {
-		Object result = null;
-		try {
-			result = loadingCache.get(key);
-		} catch (ExecutionException e) {
-			e.printStackTrace();
+		Long time = expire.get(key);
+		if (null != time && System.currentTimeMillis() < time) {
+			return cache.get(key);
+		} else {
+			expire.remove(key);
+			cache.remove(key);
+			return null;
 		}
-		return result;
 	}
 
 	public static boolean hasKey(String key) {
-		Set<String> keySet = loadingCache.asMap().keySet();
-		if (keySet.contains(key)) {
-			return true;
+		if (expire.containsKey(key)) {
+			Long time = expire.get(key);
+			if (null != time && System.currentTimeMillis() < time) {
+				return cache.containsKey(key);
+			}
 		}
 		return false;
 	}
 
+	public static void set(String key, Object value, long seconds) {
+		cache.put(key, value);
+		expire.put(key, System.currentTimeMillis() + (seconds * 1000));
+	}
+
+	public static void del(String key) {
+		cache.remove(key);
+		expire.remove(key);
+	}
 }
