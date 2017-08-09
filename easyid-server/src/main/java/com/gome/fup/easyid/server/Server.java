@@ -7,6 +7,7 @@ import com.gome.fup.easyid.snowflake.Snowflake;
 import com.gome.fup.easyid.util.*;
 import com.gome.fup.easyid.zk.ZkClient;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -61,8 +62,8 @@ public class Server implements Runnable, InitializingBean {
     }
 
     public void run() {
-        EventLoopGroup bossGroup = new NioEventLoopGroup();
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+        EventLoopGroup workerGroup = new NioEventLoopGroup(8);
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap
@@ -78,7 +79,9 @@ public class Server implements Runnable, InitializingBean {
                                     .addLast(new Handler(jedisUtil, snowflake, zkClient));
                         }
                     }).option(ChannelOption.SO_BACKLOG, 128)
-                    .childOption(ChannelOption.SO_KEEPALIVE, true);
+                    .childOption(ChannelOption.SO_KEEPALIVE, true)
+                    .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                    .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
             ChannelFuture future = bootstrap.bind(IpUtil.getLocalHost(), Constant.EASYID_SERVER_PORT).sync();
             future.channel().closeFuture().sync();
         } catch (Exception e) {
