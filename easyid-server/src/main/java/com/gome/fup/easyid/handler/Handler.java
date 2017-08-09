@@ -15,8 +15,6 @@ import org.apache.log4j.Logger;
  */
 public class Handler extends SimpleChannelInboundHandler<Request> {
 
-    private final static Logger LOGGER = Logger.getLogger(Handler.class);
-
     private JedisUtil jedisUtil;
 
     private Snowflake snowflake;
