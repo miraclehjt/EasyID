@@ -1,6 +1,5 @@
 package com.gome.fup.easyid.id;
 
-import com.gome.fup.easyid.exception.NoMoreValueInRedisException;
 import com.gome.fup.easyid.handler.EncoderHandler;
 import com.gome.fup.easyid.model.Request;
 import com.gome.fup.easyid.util.*;
@@ -20,6 +19,8 @@ import org.springframework.beans.factory.InitializingBean;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 客户端ID生成类
@@ -28,6 +29,8 @@ import java.util.concurrent.Executors;
 public class EasyID implements InitializingBean{
 
     private static final Logger logger = Logger.getLogger(EasyID.class);
+
+    private static Lock lock = new ReentrantLock();
 
     /**
      * 服务端开始生成新的ID的开关
@@ -72,17 +75,22 @@ public class EasyID implements InitializingBean{
         try {
             Long[] ids = new Long[count];
             int list_min_size = zkClient.getRedisListSize() * 300;
-            synchronized (obj) {
+            lock.lock();
+            try {
                 long len = jedisUtil.llen(Constant.REDIS_LIST_NAME);
                 if ((int)len < list_min_size || count > (int)len) {
                     getRedisLock();
                     //logger.info("ids in redis less then 300");
                     if (len == 0l) {
                         //synchronized为可重入锁，允许递归调用
+                        lock.unlock();
+                        //logger.info("Thread sleep 50ms!");
                         Thread.sleep(50l);
                         return nextIds(count);
                     }
                 }
+            } finally {
+                lock.unlock();
             }
             for (int i = 0; i < count; i++) {
                 String id = jedisUtil.lpop(Constant.REDIS_LIST_NAME);
@@ -90,9 +98,9 @@ public class EasyID implements InitializingBean{
             }
             return ids;
         } catch (InterruptedException e) {
-            logger.error(e);
+            e.printStackTrace();
         } catch (NumberFormatException e) {
-            logger.error(e);
+            e.printStackTrace();
         }
         return new Long[count];
     }
