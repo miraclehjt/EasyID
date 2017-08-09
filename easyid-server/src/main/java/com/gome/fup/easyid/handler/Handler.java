@@ -8,12 +8,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.log4j.Logger;
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisOperations;
-
-import java.io.Serializable;
 
 /**
  * 请求处理handler
@@ -23,7 +17,7 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
 
     private final static Logger LOGGER = Logger.getLogger(Handler.class);
 
-    private RedisOperations<Serializable, Serializable> redisTemplate;
+    private JedisUtil jedisUtil;
 
     private Snowflake snowflake;
 
@@ -36,45 +30,34 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
                 final int redis_list_size = zkClient.getRedisListSize() * 1000;
                 String ip = IpUtil.getLocalHost();
                 zkClient.increase(ip);
-                redisTemplate.execute(new RedisCallback<Object>() {
-                    public Object doInRedis(RedisConnection connection) throws DataAccessException {
-                        byte[] key = Constant.REDIS_LIST_NAME.getBytes();
-                        Long len = connection.lLen(key);
-                        if (null == len) len = 0l;
-                        //批量生成id
-                        long[] ids = snowflake.nextIds(redis_list_size - len.intValue());
-                        //将生成的id存入redis队列
-                        for (long id : ids) {
-                            connection.rPush(key, String.valueOf(id).getBytes());
-                        }
-                        return null;
-                    }
-                });
+                Long len = jedisUtil.llen(Constant.REDIS_LIST_NAME);
+                if (null == len) len = 0l;
+                //批量生成id
+                long[] ids = snowflake.nextIds(redis_list_size - len.intValue());
+                //将生成的id存入redis队列
+                for (long id : ids) {
+                    jedisUtil.rpush(Constant.REDIS_LIST_NAME, String.valueOf(id));
+                }
             } finally {
-                redisTemplate.execute(new RedisCallback<Object>() {
-                    public Object doInRedis(RedisConnection connection) throws DataAccessException {
-                        //释放redis锁
-                        return connection.del(Constant.REDIS_SETNX_KEY.getBytes());
-                    }
-                });
+                jedisUtil.del(Constant.REDIS_SETNX_KEY);
             }
             //zkClient.decrease(ip);
             ctx.writeAndFlush("").addListener(ChannelFutureListener.CLOSE);
         }
     }
 
-    public Handler(RedisOperations<Serializable, Serializable> redisTemplate, Snowflake snowflake, ZkClient zkClient) {
-        this.redisTemplate = redisTemplate;
+    public Handler(JedisUtil jedisUtil, Snowflake snowflake, ZkClient zkClient) {
+        this.jedisUtil = jedisUtil;
         this.snowflake = snowflake;
         this.zkClient = zkClient;
     }
 
-    public RedisOperations<Serializable, Serializable> getRedisTemplate() {
-        return redisTemplate;
+    public JedisUtil getJedisUtil() {
+        return jedisUtil;
     }
 
-    public void setRedisTemplate(RedisOperations<Serializable, Serializable> redisTemplate) {
-        this.redisTemplate = redisTemplate;
+    public void setJedisUtil(JedisUtil jedisUtil) {
+        this.jedisUtil = jedisUtil;
     }
 
     public Snowflake getSnowflake() {

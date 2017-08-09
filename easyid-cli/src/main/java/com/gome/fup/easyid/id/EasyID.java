@@ -16,16 +16,10 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisOperations;
-import org.springframework.data.redis.core.TimeoutUtils;
 
-import java.io.Serializable;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 客户端ID生成类
@@ -40,18 +34,25 @@ public class EasyID implements InitializingBean{
      */
     private volatile boolean flag = false;
 
-    private RedisOperations<Serializable, Serializable> redisTemplate;
-
     private ExecutorService executorService = Executors.newFixedThreadPool(4);
 
     private ZkClient zkClient;
+
+    private JedisUtil jedisUtil;
 
     private final Object obj = new Object();
 
     /**
      *ZooKeeper服务地址
      */
-    protected String zkAddress;
+    private String zkAddress;
+
+    /**
+     *rediss服务地址
+     */
+    private String redissAddress;
+
+
 
     /**
      * 获取id
@@ -68,56 +69,49 @@ public class EasyID implements InitializingBean{
      * @return
      */
     public Long[] nextIds(final int count) {
-        final byte[] key = Constant.REDIS_LIST_NAME.getBytes();
-        return redisTemplate.execute(new RedisCallback<Long[]>() {
-            public Long[] doInRedis(RedisConnection connection) throws DataAccessException {
-                try {
-                    Long[] ids = new Long[count];
-                    int list_min_size = zkClient.getRedisListSize() * 300;
-                    synchronized (obj) {
-                        Long len = connection.lLen(key);
-                        if (len < list_min_size) {
-                            getRedisLock(connection, Constant.REDIS_SETNX_KEY.getBytes());
-                            logger.info("ids in redis less then 300");
-                            if (len == 0l) {
-                                //synchronized为可重入锁，允许递归调用
-                                return nextIds(count);
-                            }
-                        }
-                        if (count > len.intValue()) {
-                            logger.error("count:" + count + ",len:" + len.intValue());
-                            throw new NoMoreValueInRedisException("没有足够的值");
-                        }
-                        for (int i = 0; i < count; i++) {
-                            byte[] bytes = connection.lPop(key);
-                            ids[i] = Long.valueOf(new String(bytes));
-                        }
+        try {
+            Long[] ids = new Long[count];
+            int list_min_size = zkClient.getRedisListSize() * 300;
+            synchronized (obj) {
+                long len = jedisUtil.llen(Constant.REDIS_LIST_NAME);
+                if ((int)len < list_min_size || count > (int)len) {
+                    getRedisLock();
+                    logger.info("ids in redis less then 300");
+                    if (len == 0l) {
+                        //synchronized为可重入锁，允许递归调用
+                        Thread.sleep(50l);
+                        return nextIds(count);
                     }
-                    return ids;
-                } catch (KeeperException e) {
-                    logger.error(e);
-                } catch (InterruptedException e) {
-                    logger.error(e);
                 }
-                return null;
+                for (int i = 0; i < count; i++) {
+                    String id = jedisUtil.lpop(Constant.REDIS_LIST_NAME);
+                    ids[i] = Long.valueOf(id);
+                }
             }
-        });
+            return ids;
+        } catch (InterruptedException e) {
+            logger.error(e);
+        } catch (NumberFormatException e) {
+            logger.error(e);
+        }
+        return new Long[count];
     }
 
     /**
      * 获取redis锁；若获得，则发送消息到服务端
-     * @param connection
-     * @param setnex_key
      * @throws KeeperException
      * @throws InterruptedException
      */
-    private void getRedisLock(RedisConnection connection, byte[] setnex_key) throws KeeperException, InterruptedException {
-        if (connection.setNX(setnex_key, "1".getBytes())) {    //获得redis锁
-            logger.info("get redis synchronized!");
-            //设置redis锁的有效时间3秒
-            connection.pExpire(setnex_key, TimeoutUtils.toMillis(5l, TimeUnit.SECONDS));
-            //发送创建ID的请求到服务端
-            send();
+    private void getRedisLock() {
+        if (jedisUtil.setnx(Constant.REDIS_SETNX_KEY, "1") == 1l) {
+            jedisUtil.expire(Constant.REDIS_SETNX_KEY, 3);
+            try {
+                send();
+            } catch (KeeperException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -125,12 +119,12 @@ public class EasyID implements InitializingBean{
      * 开启另外的线程，访问服务端
      */
     private void send() throws KeeperException, InterruptedException {
-        //通过zookeeper的负载均衡算法，获取服务端ip地址
-        String ip = zkClient.balance();
-        final String host = IpUtil.getHost(ip);
-        final int port = Constant.EASYID_SERVER_PORT;
-        executorService.submit(new Runnable() {
-            public void run() {
+        executorService.submit(new Callable<Object>() {
+            public Object call() throws Exception {
+                //通过zookeeper的负载均衡算法，获取服务端ip地址
+                String ip = zkClient.balance();
+                final String host = IpUtil.getHost(ip);
+                final int port = Constant.EASYID_SERVER_PORT;
                 EventLoopGroup group = new NioEventLoopGroup();
                 try {
                     Bootstrap bootstrap = new Bootstrap();
@@ -156,17 +150,10 @@ public class EasyID implements InitializingBean{
                 } finally {
                     group.shutdownGracefully();
                 }
+                return null;
             }
         });
 
-    }
-
-    public RedisOperations<Serializable, Serializable> getRedisTemplate() {
-        return redisTemplate;
-    }
-
-    public void setRedisTemplate(RedisOperations<Serializable, Serializable> redisTemplate) {
-        this.redisTemplate = redisTemplate;
     }
 
     public boolean isFlag() {
@@ -193,8 +180,18 @@ public class EasyID implements InitializingBean{
         this.zkAddress = zkAddress;
     }
 
+    public String getRedissAddress() {
+        return redissAddress;
+    }
+
+    public void setRedissAddress(String redissAddress) {
+        this.redissAddress = redissAddress;
+    }
+
     public void afterPropertiesSet() throws Exception {
         //初始化ZkClient
         this.zkClient = new ZkClient(zkAddress);
+        String[] split = this.redissAddress.split(":");
+        this.jedisUtil = JedisUtil.newInstance(split[0], Integer.valueOf(split[1]));
     }
 }
