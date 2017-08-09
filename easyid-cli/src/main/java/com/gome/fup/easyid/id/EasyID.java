@@ -83,7 +83,6 @@ public class EasyID implements InitializingBean{
                     //logger.info("ids in redis less then 300");
                     if (len == 0l) {
                         //synchronized为可重入锁，允许递归调用
-                        lock.unlock();
                         //logger.info("Thread sleep 50ms!");
                         Thread.sleep(50l);
                         return nextIds(count);
