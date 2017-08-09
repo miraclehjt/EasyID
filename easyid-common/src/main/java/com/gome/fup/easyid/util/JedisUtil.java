@@ -119,6 +119,14 @@ public class JedisUtil {
         });
     }
 
+    public Long incr(final String key) {
+        return (Long)command(new JedisCommand<Object>() {
+            public Object command(Jedis jedis) {
+                return jedis.incr(key);
+            }
+        });
+    }
+
     private Object command(JedisCommand<Object> command) {
         Jedis jedis = getJedis();
         try {
