@@ -26,8 +26,9 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Request request) throws Exception {
         if (request.getType() == MessageType.REQUEST_TYPE_CREATE) {
+            long begin = System.currentTimeMillis();
             try {
-                final int redis_list_size = zkClient.getRedisListSize() * 1000;
+                int redis_list_size = zkClient.getRedisListSize() * 1000;
                 String ip = IpUtil.getLocalHost();
                 zkClient.increase(ip);
                 Long len = jedisUtil.llen(Constant.REDIS_LIST_NAME);
@@ -41,6 +42,7 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
             } finally {
                 jedisUtil.del(Constant.REDIS_SETNX_KEY);
             }
+            System.out.println("handler run time:" + (System.currentTimeMillis() - begin));
             //zkClient.decrease(ip);
             ctx.writeAndFlush("").addListener(ChannelFutureListener.CLOSE);
         }

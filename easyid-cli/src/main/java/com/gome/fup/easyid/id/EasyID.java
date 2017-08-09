@@ -76,17 +76,17 @@ public class EasyID implements InitializingBean{
                 long len = jedisUtil.llen(Constant.REDIS_LIST_NAME);
                 if ((int)len < list_min_size || count > (int)len) {
                     getRedisLock();
-                    logger.info("ids in redis less then 300");
+                    //logger.info("ids in redis less then 300");
                     if (len == 0l) {
                         //synchronized为可重入锁，允许递归调用
                         Thread.sleep(50l);
                         return nextIds(count);
                     }
                 }
-                for (int i = 0; i < count; i++) {
-                    String id = jedisUtil.lpop(Constant.REDIS_LIST_NAME);
-                    ids[i] = Long.valueOf(id);
-                }
+            }
+            for (int i = 0; i < count; i++) {
+                String id = jedisUtil.lpop(Constant.REDIS_LIST_NAME);
+                ids[i] = Long.valueOf(id);
             }
             return ids;
         } catch (InterruptedException e) {
