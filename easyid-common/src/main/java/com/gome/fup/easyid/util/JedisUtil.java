@@ -11,10 +11,6 @@ public class JedisUtil {
 
     private static JedisPool jedisPool;
 
-    private String host;
-
-    private int port;
-
     private static final JedisUtil util = new JedisUtil();
 
     /**
