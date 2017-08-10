@@ -71,9 +71,19 @@ public abstract class AbstractZkClient {
      * @throws KeeperException
      * @throws InterruptedException
      */
-    private int getRootChildren() throws KeeperException, InterruptedException {
+    public int getRootChildrenSize() throws KeeperException, InterruptedException {
         List<String> nodes = zooKeeper.getChildren(ZK_ROOT_NODE, null, null);
         return nodes.size();
+    }
+
+    /**
+     * 获取/EasyID根节点下子节点的数量
+     * @return
+     * @throws KeeperException
+     * @throws InterruptedException
+     */
+    public List<String> getRootChildren() throws KeeperException, InterruptedException {
+        return zooKeeper.getChildren(ZK_ROOT_NODE, null, null);
     }
 
     /**
@@ -87,7 +97,7 @@ public abstract class AbstractZkClient {
             size =  (Integer)Cache.get(Constant.REDIS_LIST_SIZE);
         } else {
             try {
-                size = this.getRootChildren();
+                size = this.getRootChildrenSize();
                 //设置有效时间60s
                 Cache.set(Constant.REDIS_LIST_SIZE, size,60);
             } catch (Exception e) {
@@ -97,5 +107,6 @@ public abstract class AbstractZkClient {
         }
         return size;
     }
-    
+
+
 }

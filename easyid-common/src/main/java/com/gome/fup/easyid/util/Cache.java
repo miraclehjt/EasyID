@@ -54,7 +54,9 @@ public class Cache {
 
 	public static void set(String key, Object value, long seconds) {
 		cache.put(key, value);
-		expire.put(key, System.currentTimeMillis() + (seconds * 1000));
+		if (seconds != -1l) {
+			expire.put(key, System.currentTimeMillis() + (seconds * 1000));
+		}
 	}
 
 	public static void del(String key) {
