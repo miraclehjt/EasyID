@@ -37,8 +37,10 @@ public class JedisUtil {
         jedisPool = new JedisPool(config, host, port);
     }
 
-    private Jedis getJedis() {
+    private synchronized Jedis getJedis() {
+
         return jedisPool.getResource();
+
     }
 
     private void returnResource(Jedis jedis) {
