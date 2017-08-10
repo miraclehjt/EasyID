@@ -169,5 +169,10 @@ public class EasyID implements InitializingBean{
         this.zkClient = new ZkClient(zkAddress);
         String[] split = this.redissAddress.split(":");
         this.jedisUtil = JedisUtil.newInstance(split[0], Integer.valueOf(split[1]));
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            public void run() {
+                executorService.shutdown();
+            }
+        }));
     }
 }
