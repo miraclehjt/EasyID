@@ -31,4 +31,12 @@ public class ConversionUtil {
                 (byte) (a & 0xFF)
         };
     }
+
+    public static String[] longsToStrings(long[] longs) {
+        String[] strs = new String[longs.length];
+        for (int i = 0; i < longs.length; i++) {
+            strs[i] = String.valueOf(longs[i]);
+        }
+        return strs;
+    }
 }
