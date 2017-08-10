@@ -19,8 +19,6 @@ import org.springframework.beans.factory.InitializingBean;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 客户端ID生成类
@@ -30,20 +28,16 @@ public class EasyID implements InitializingBean{
 
     private static final Logger logger = Logger.getLogger(EasyID.class);
 
-    private static Lock lock = new ReentrantLock();
-
     /**
      * 服务端开始生成新的ID的开关
      */
     private volatile boolean flag = false;
 
-    private ExecutorService executorService = Executors.newFixedThreadPool(4);
+    private ExecutorService executorService = Executors.newFixedThreadPool(16);
 
     private ZkClient zkClient;
 
     private JedisUtil jedisUtil;
-
-    private final Object obj = new Object();
 
     /**
      *ZooKeeper服务地址
@@ -61,47 +55,22 @@ public class EasyID implements InitializingBean{
      * 获取id
      * @return
      */
-    public long nextId() {
-        if (nextIds(1) == null) throw new NullPointerException();
-        return nextIds(1)[0];
-    }
-
-    /**
-     * 获取count数量的id集合
-     * @param count
-     * @return
-     */
-    public Long[] nextIds(final int count) {
-        try {
-            Long[] ids = new Long[count];
-            int list_min_size = zkClient.getRedisListSize() * 300;
-            lock.lock();
-            try {
-                long len = jedisUtil.llen(Constant.REDIS_LIST_NAME);
-                if ((int)len < list_min_size || count > (int)len) {
-                    getRedisLock();
-                    //logger.info("ids in redis less then 300");
-                    if (len == 0l) {
-                        //synchronized为可重入锁，允许递归调用
-                        //logger.info("Thread sleep 50ms!");
-                        Thread.sleep(50l);
-                        return nextIds(count);
-                    }
-                }
-            } finally {
-                lock.unlock();
+    public long nextId() throws InterruptedException {
+        int list_min_size = zkClient.getRedisListSize() * 300;
+        long len = jedisUtil.llen(Constant.REDIS_LIST_NAME);
+        if ((int) len < list_min_size) {
+            getRedisLock();
+            if (len == 0l) {
+                Thread.sleep(500l);
+                return nextId();
             }
-            for (int i = 0; i < count; i++) {
-                String id = jedisUtil.lpop(Constant.REDIS_LIST_NAME);
-                ids[i] = Long.valueOf(id);
-            }
-            return ids;
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (NumberFormatException e) {
-            e.printStackTrace();
         }
-        return new Long[count];
+        String id = jedisUtil.lpop(Constant.REDIS_LIST_NAME);
+        if (null == id || "".equals(id)) {
+            Thread.sleep(50l);
+            return nextId();
+        }
+        return Long.valueOf(id);
     }
 
     /**
