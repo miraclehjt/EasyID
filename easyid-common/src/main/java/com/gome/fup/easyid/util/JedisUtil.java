@@ -97,6 +97,14 @@ public class JedisUtil {
         });
     }
 
+    public Long rpush(final String key, final String[] value) {
+        return (Long)command(new JedisCommand<Object>() {
+            public Long command(Jedis jedis) {
+                return jedis.rpush(key, value);
+            }
+        });
+    }
+
     public Long setnx(final String key, final String value) {
         return (Long)command(new JedisCommand<Object>() {
             public Object command(Jedis jedis) {
