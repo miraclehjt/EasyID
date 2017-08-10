@@ -33,7 +33,7 @@ public class Cache {
 
 	public static Object get(String key) {
 		Long time = expire.get(key);
-		if (null != time && System.currentTimeMillis() < time) {
+		if (null != time && System.currentTimeMillis() < time || time == -1l) {
 			return cache.get(key);
 		} else {
 			expire.remove(key);
@@ -54,7 +54,9 @@ public class Cache {
 
 	public static void set(String key, Object value, long seconds) {
 		cache.put(key, value);
-		if (seconds != -1l) {
+		if (seconds == -1l) {
+			expire.put(key, -1l);
+		} else {
 			expire.put(key, System.currentTimeMillis() + (seconds * 1000));
 		}
 	}

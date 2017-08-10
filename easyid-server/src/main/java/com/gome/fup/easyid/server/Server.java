@@ -54,6 +54,8 @@ public class Server implements Runnable, InitializingBean {
 
     public void afterPropertiesSet() throws Exception {
         jedisUtil = JedisUtil.newInstance(redishost, redisport);
+        String localHost = IpUtil.getLocalHost();
+        Cache.set(Constant.LOCALHOST, localHost, -1l);
         //查看redis中是否有id,没有则创建
         pushIdsInRedis();
         //启动服务

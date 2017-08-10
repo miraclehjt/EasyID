@@ -8,6 +8,9 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.KeeperException;
+
+import java.io.IOException;
 
 /**
  * 请求处理handler
@@ -27,8 +30,9 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
             long begin = System.currentTimeMillis();
             try {
                 int redis_list_size = zkClient.getRedisListSize() * 1000;
-                String ip = IpUtil.getLocalHost();
-                zkClient.increase(ip);
+                String ip = (String) Cache.get(Constant.LOCALHOST);
+                //zkClient.increase(ip);
+                new Thread(new IncreaseRunnable(zkClient, ip)).start();
                 Long len = jedisUtil.llen(Constant.REDIS_LIST_NAME);
                 if (null == len) len = 0l;
                 //批量生成id
@@ -74,6 +78,30 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
 
     public void setZkClient(ZkClient zkClient) {
         this.zkClient = zkClient;
+    }
+
+    private class IncreaseRunnable implements Runnable {
+
+        private ZkClient zkClient;
+
+        private String ip;
+
+        public IncreaseRunnable(ZkClient zkClient, String ip) {
+            this.zkClient = zkClient;
+            this.ip = ip;
+        }
+
+        public void run() {
+            try {
+                zkClient.increase(ip);
+            } catch (KeeperException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 }
