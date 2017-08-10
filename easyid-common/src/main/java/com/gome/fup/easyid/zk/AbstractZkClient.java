@@ -99,7 +99,7 @@ public abstract class AbstractZkClient {
             try {
                 size = this.getRootChildrenSize();
                 //设置有效时间60s
-                Cache.set(Constant.REDIS_LIST_SIZE, size,60);
+                Cache.set(Constant.REDIS_LIST_SIZE, size,60l);
             } catch (Exception e) {
                 logger.error(e);
                 size = 1;
