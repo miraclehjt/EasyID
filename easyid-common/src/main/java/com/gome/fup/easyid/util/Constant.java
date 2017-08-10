@@ -25,4 +25,9 @@ public class Constant {
      */
     public static final String REDIS_SETNX_KEY = "EasyID_REDIS_SETNX_KEY";
 
+
+    /**
+     * localhost
+     */
+    public static final String LOCALHOST = "localhost";
 }

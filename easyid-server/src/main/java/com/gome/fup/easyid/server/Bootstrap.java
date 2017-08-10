@@ -32,7 +32,6 @@ public class Bootstrap {
         }
         snowflake.setWorkerId(size);
         snowflake.setWorkerId(size);
-        System.out.println("size:" + size);
     }
 
     /**
