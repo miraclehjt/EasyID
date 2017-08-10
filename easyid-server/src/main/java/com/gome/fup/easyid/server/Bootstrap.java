@@ -39,7 +39,7 @@ public class Bootstrap {
      * @param context
      * @param arg
      */
-    private static void analysis(ClassPathXmlApplicationContext context, String arg) {
+    private static void analysis(ClassPathXmlApplicationContext context, String arg) throws KeeperException, InterruptedException {
         if (arg.contains("-workerid")) {
             String[] split = arg.split("-workerid");
             Snowflake snowflake = context.getBean(Snowflake.class);
@@ -49,6 +49,14 @@ public class Bootstrap {
             String[] split = arg.split("-datacenterid");
             Snowflake snowflake = context.getBean(Snowflake.class);
             snowflake.setDatacenterId(Long.parseLong(split[1]));
+        }
+        if (!arg.contains("-workerid") && !arg.contains("-datacenterid")) {
+            //自动管理workerid与datacenterid
+            ZkClient zkClient = context.getBean(ZkClient.class);
+            Snowflake snowflake = context.getBean(Snowflake.class);
+            int size = zkClient.getRootChildrenSize();
+            snowflake.setWorkerId(size);
+            snowflake.setWorkerId(size);
         }
     }
 }
