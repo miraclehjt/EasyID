@@ -102,9 +102,8 @@ public class Server implements Runnable, InitializingBean {
         Long len = jedisUtil.llen(Constant.REDIS_LIST_NAME);
         if (len == null || len.intValue() == 0) {
             long[] ids = snowflake.nextIds(redis_list_size);
-            for (long id : ids) {
-                jedisUtil.rpush(Constant.REDIS_LIST_NAME, String.valueOf(id));
-            }
+            String[] strings = ConversionUtil.longsToStrings(ids);
+            jedisUtil.rpush(Constant.REDIS_LIST_NAME, strings);
         }
     }
 

@@ -37,10 +37,9 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
                 if (null == len) len = 0l;
                 //批量生成id
                 long[] ids = snowflake.nextIds(redis_list_size - len.intValue());
+                String[] strs = ConversionUtil.longsToStrings(ids);
                 //将生成的id存入redis队列
-                for (long id : ids) {
-                    jedisUtil.rpush(Constant.REDIS_LIST_NAME, String.valueOf(id));
-                }
+                jedisUtil.rpush(Constant.REDIS_LIST_NAME, strs);
             } finally {
                 jedisUtil.del(Constant.REDIS_SETNX_KEY);
             }
