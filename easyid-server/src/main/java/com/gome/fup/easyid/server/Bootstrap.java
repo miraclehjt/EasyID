@@ -28,7 +28,8 @@ public class Bootstrap {
         Snowflake snowflake = context.getBean(Snowflake.class);
         int size = zkClient.getRootChildrenSize();
         if (size > 31) {
-            size = size - 31;
+            int times = size/31;
+            size = size - (31 * times);
         }
         snowflake.setWorkerId(size);
         snowflake.setWorkerId(size);
