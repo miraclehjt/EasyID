@@ -71,12 +71,12 @@ public class EasyID implements InitializingBean{
                 }
             }
             id = jedis.lpop(Constant.REDIS_LIST_NAME);
-            if (null == id || "".equals(id)) {
-                Thread.sleep(50l);
-                return nextId();
-            }
         } finally {
             jedisUtil.returnResource(jedis);
+        }
+        if (null == id || "".equals(id)) {
+            Thread.sleep(50l);
+            return nextId();
         }
         System.out.println("nextId use time : " + (System.currentTimeMillis() - begin));
         return Long.valueOf(id);
