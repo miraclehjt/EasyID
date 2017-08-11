@@ -15,6 +15,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.springframework.beans.factory.InitializingBean;
+import redis.clients.jedis.Jedis;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -56,20 +57,28 @@ public class EasyID implements InitializingBean{
      * @return
      */
     public long nextId() throws InterruptedException {
+        long begin = System.currentTimeMillis();
         int list_min_size = zkClient.getRedisListSize() * 300;
-        long len = jedisUtil.llen(Constant.REDIS_LIST_NAME);
-        if ((int) len < list_min_size) {
-            getRedisLock();
-            if (len == 0l) {
-                Thread.sleep(500l);
+        String id;
+        Jedis jedis = jedisUtil.getJedis();
+        try {
+            long len = jedis.llen(Constant.REDIS_LIST_NAME);
+            if ((int) len < list_min_size) {
+                getRedisLock(jedis);
+                if (len == 0l) {
+                    Thread.sleep(500l);
+                    return nextId();
+                }
+            }
+            id = jedis.lpop(Constant.REDIS_LIST_NAME);
+            if (null == id || "".equals(id)) {
+                Thread.sleep(50l);
                 return nextId();
             }
+        } finally {
+            jedisUtil.returnResource(jedis);
         }
-        String id = jedisUtil.lpop(Constant.REDIS_LIST_NAME);
-        if (null == id || "".equals(id)) {
-            Thread.sleep(50l);
-            return nextId();
-        }
+        System.out.println("nextId use time : " + (System.currentTimeMillis() - begin));
         return Long.valueOf(id);
     }
 
@@ -78,9 +87,9 @@ public class EasyID implements InitializingBean{
      * @throws KeeperException
      * @throws InterruptedException
      */
-    private void getRedisLock() {
-        if (jedisUtil.setnx(Constant.REDIS_SETNX_KEY, "1") == 1l) {
-            jedisUtil.expire(Constant.REDIS_SETNX_KEY, 3);
+    private void getRedisLock(Jedis jedis) {
+        if (jedis.setnx(Constant.REDIS_SETNX_KEY, "1") == 1l) {
+            jedis.expire(Constant.REDIS_SETNX_KEY, 3);
             try {
                 send();
             } catch (KeeperException e) {
