@@ -66,7 +66,7 @@ public class EasyID implements InitializingBean{
             if ((int) len < list_min_size) {
                 getRedisLock(jedis);
                 if (len == 0l) {
-                    Thread.sleep(500l);
+                    Thread.sleep(100l);
                     return nextId();
                 }
             }
@@ -75,7 +75,7 @@ public class EasyID implements InitializingBean{
             jedisUtil.returnResource(jedis);
         }
         if (null == id || "".equals(id)) {
-            Thread.sleep(50l);
+            Thread.sleep(100l);
             return nextId();
         }
         System.out.println("nextId use time : " + (System.currentTimeMillis() - begin));
