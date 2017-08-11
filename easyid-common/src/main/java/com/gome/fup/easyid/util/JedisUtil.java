@@ -30,20 +30,20 @@ public class JedisUtil {
 
     private static void init(String host, int port) {
         JedisPoolConfig config = new JedisPoolConfig();
-        config.setMaxIdle(512);
+        config.setMaxIdle(128);
         config.setMaxTotal(1024);
         config.setMaxWaitMillis(30000);
         config.setTestOnBorrow(true);
         jedisPool = new JedisPool(config, host, port);
     }
 
-    private synchronized Jedis getJedis() {
+    public synchronized Jedis getJedis() {
 
         return jedisPool.getResource();
 
     }
 
-    private void returnResource(Jedis jedis) {
+    public void returnResource(Jedis jedis) {
         jedisPool.returnResource(jedis);
     }
 
@@ -105,10 +105,12 @@ public class JedisUtil {
         });
     }
 
-    public Long setnx(final String key, final String value) {
+    public Long setnx(final String key, final String value, final int seconds) {
         return (Long)command(new JedisCommand<Object>() {
             public Object command(Jedis jedis) {
-                return jedis.setnx(key, value);
+                Long result = jedis.setnx(key, value);
+                jedis.expire(key, seconds);
+                return result;
             }
         });
     }
