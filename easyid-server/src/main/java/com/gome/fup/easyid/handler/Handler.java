@@ -9,6 +9,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
+import redis.clients.jedis.Jedis;
 
 import java.io.IOException;
 
@@ -28,20 +29,26 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
     protected void channelRead0(ChannelHandlerContext ctx, Request request) throws Exception {
         if (request.getType() == MessageType.REQUEST_TYPE_CREATE) {
             long begin = System.currentTimeMillis();
+            Jedis jedis = jedisUtil.getJedis();
             try {
-                int redis_list_size = zkClient.getRedisListSize() * 1000;
+                int redis_list_size = zkClient.getRedisListSize();
                 String ip = (String) Cache.get(Constant.LOCALHOST);
                 //zkClient.increase(ip);
                 new Thread(new IncreaseRunnable(zkClient, ip)).start();
-                Long len = jedisUtil.llen(Constant.REDIS_LIST_NAME);
-                if (null == len) len = 0l;
-                //批量生成id
-                long[] ids = snowflake.nextIds(redis_list_size - len.intValue());
-                String[] strs = ConversionUtil.longsToStrings(ids);
-                //将生成的id存入redis队列
-                jedisUtil.rpush(Constant.REDIS_LIST_NAME, strs);
+                Long len = jedis.llen(Constant.REDIS_LIST_NAME);
+                if (len < (redis_list_size * 300)) {
+                    System.out.println("len : " + len);
+                    if (null == len) len = 0l;
+                    //批量生成id
+                    long[] ids = snowflake.nextIds((redis_list_size * 1000) - len.intValue());
+                    String[] strs = ConversionUtil.longsToStrings(ids);
+                    System.out.println("ids : " + ids.length);
+                    //将生成的id存入redis队列
+                    jedis.rpush(Constant.REDIS_LIST_NAME, strs);
+                }
             } finally {
-                jedisUtil.del(Constant.REDIS_SETNX_KEY);
+                jedis.del(Constant.REDIS_SETNX_KEY);
+                jedisUtil.returnResource(jedis);
             }
             System.out.println("handler run time:" + (System.currentTimeMillis() - begin));
             //zkClient.decrease(ip);
