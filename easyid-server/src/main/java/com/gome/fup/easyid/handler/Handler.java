@@ -2,20 +2,16 @@ package com.gome.fup.easyid.handler;
 
 import com.gome.fup.easyid.model.Request;
 import com.gome.fup.easyid.snowflake.Snowflake;
-import com.gome.fup.easyid.util.Constant;
-import com.gome.fup.easyid.util.IpUtil;
-import com.gome.fup.easyid.util.KryoUtil;
-import com.gome.fup.easyid.util.MessageType;
+import com.gome.fup.easyid.util.*;
 import com.gome.fup.easyid.zk.ZkClient;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisOperations;
+import org.apache.log4j.Logger;
+import org.apache.zookeeper.KeeperException;
+import redis.clients.jedis.Jedis;
 
-import java.io.Serializable;
+import java.io.IOException;
 
 /**
  * 请求处理handler
@@ -23,53 +19,55 @@ import java.io.Serializable;
  */
 public class Handler extends SimpleChannelInboundHandler<Request> {
 
-    private RedisOperations<Serializable, Serializable> redisTemplate;
+    private JedisUtil jedisUtil;
 
     private Snowflake snowflake;
 
     private ZkClient zkClient;
 
-    private int redis_list_size;
-
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Request request) throws Exception {
         if (request.getType() == MessageType.REQUEST_TYPE_CREATE) {
-            String ip = IpUtil.getLocalHost();
-            zkClient.increase(ip);
-            redisTemplate.execute(new RedisCallback<Object>() {
-                public Object doInRedis(RedisConnection connection) throws DataAccessException {
-                    byte[] key = KryoUtil.objToByte(Constant.REDIS_LIST_NAME);
-                    Long len = connection.lLen(key);
+            long begin = System.currentTimeMillis();
+            Jedis jedis = jedisUtil.getJedis();
+            try {
+                int redis_list_size = zkClient.getRedisListSize();
+                String ip = (String) Cache.get(Constant.LOCALHOST);
+                //zkClient.increase(ip);
+                new Thread(new IncreaseRunnable(zkClient, ip)).start();
+                Long len = jedis.llen(Constant.REDIS_LIST_NAME);
+                if (len < (redis_list_size * 300)) {
+                    System.out.println("len : " + len);
                     if (null == len) len = 0l;
                     //批量生成id
-                    long[] ids = snowflake.nextIds(redis_list_size - len.intValue());
+                    long[] ids = snowflake.nextIds((redis_list_size * 1000) - len.intValue());
+                    String[] strs = ConversionUtil.longsToStrings(ids);
+                    System.out.println("ids : " + ids.length);
                     //将生成的id存入redis队列
-                    for (long id : ids) {
-                        connection.rPush(key, KryoUtil.objToByte(id));
-                    }
-                    //释放redis锁
-                    connection.del(KryoUtil.objToByte(Constant.REDIS_SETNX_KEY));
-                    return null;
+                    jedis.rpush(Constant.REDIS_LIST_NAME, strs);
                 }
-            });
+            } finally {
+                jedis.del(Constant.REDIS_SETNX_KEY);
+                jedisUtil.returnResource(jedis);
+            }
+            System.out.println("handler run time:" + (System.currentTimeMillis() - begin));
             //zkClient.decrease(ip);
             ctx.writeAndFlush("").addListener(ChannelFutureListener.CLOSE);
         }
     }
 
-    public Handler(RedisOperations<Serializable, Serializable> redisTemplate, Snowflake snowflake, ZkClient zkClient, int redis_list_size) {
-        this.redisTemplate = redisTemplate;
+    public Handler(JedisUtil jedisUtil, Snowflake snowflake, ZkClient zkClient) {
+        this.jedisUtil = jedisUtil;
         this.snowflake = snowflake;
         this.zkClient = zkClient;
-        this.redis_list_size = redis_list_size;
     }
 
-    public RedisOperations<Serializable, Serializable> getRedisTemplate() {
-        return redisTemplate;
+    public JedisUtil getJedisUtil() {
+        return jedisUtil;
     }
 
-    public void setRedisTemplate(RedisOperations<Serializable, Serializable> redisTemplate) {
-        this.redisTemplate = redisTemplate;
+    public void setJedisUtil(JedisUtil jedisUtil) {
+        this.jedisUtil = jedisUtil;
     }
 
     public Snowflake getSnowflake() {
@@ -88,11 +86,28 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
         this.zkClient = zkClient;
     }
 
-    public int getRedis_list_size() {
-        return redis_list_size;
+    private class IncreaseRunnable implements Runnable {
+
+        private ZkClient zkClient;
+
+        private String ip;
+
+        public IncreaseRunnable(ZkClient zkClient, String ip) {
+            this.zkClient = zkClient;
+            this.ip = ip;
+        }
+
+        public void run() {
+            try {
+                zkClient.increase(ip);
+            } catch (KeeperException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
-    public void setRedis_list_size(int redis_list_size) {
-        this.redis_list_size = redis_list_size;
-    }
 }

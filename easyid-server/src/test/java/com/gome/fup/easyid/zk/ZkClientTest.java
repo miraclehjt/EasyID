@@ -6,10 +6,6 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.Test;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisTemplate;
 
 import java.io.IOException;
 
@@ -38,21 +34,4 @@ public class ZkClientTest {
         System.out.println(increase);
     }
 
-    @Test
-    public void testRedis() {
-        String key = "EasyID";
-        final byte[] bytes = KryoUtil.objToByte(key);
-        Snowflake snowflake = new Snowflake();
-        ApplicationContext context = new ClassPathXmlApplicationContext("classpath:spring-config.xml");
-        RedisTemplate redisTemplate = context.getBean(RedisTemplate.class);
-        long id = snowflake.nextId();
-        System.out.println(id);
-        final byte[] value = KryoUtil.objToByte(id);
-        redisTemplate.execute(new RedisCallback() {
-            public Object doInRedis(RedisConnection connection) throws DataAccessException {
-                return connection.rPush(bytes,value);
-            }
-        });
-
-    }
 }

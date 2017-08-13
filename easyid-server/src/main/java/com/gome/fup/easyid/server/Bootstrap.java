@@ -23,13 +23,16 @@ public class Bootstrap {
      */
     public static void main(String[] args) throws IOException, KeeperException, InterruptedException {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("classpath:spring-config.xml");
-        if (args != null || args.length > 0) {
-            for (String arg : args) {
-                analysis(context, arg);
-            }
+        //自动管理workerid与datacenterid
+        ZkClient zkClient = context.getBean(ZkClient.class);
+        Snowflake snowflake = context.getBean(Snowflake.class);
+        int size = zkClient.getRootChildrenSize();
+        if (size > 31) {
+            int times = size/31;
+            size = size - (31 * times);
         }
-        ZkClient client = context.getBean(ZkClient.class);
-        client.register(IpUtil.getLocalHost());
+        snowflake.setWorkerId(size);
+        snowflake.setWorkerId(size);
     }
 
     /**
@@ -41,12 +44,7 @@ public class Bootstrap {
      * @param context
      * @param arg
      */
-    private static void analysis(ClassPathXmlApplicationContext context, String arg) {
-        if (arg.contains("-zk")) {
-            String[] split = arg.split("-zk");
-            ZkClient client = context.getBean(ZkClient.class);
-            client.setAddress(split[1]);
-        }
+    private static void analysis(ClassPathXmlApplicationContext context, String arg) throws KeeperException, InterruptedException {
         if (arg.contains("-workerid")) {
             String[] split = arg.split("-workerid");
             Snowflake snowflake = context.getBean(Snowflake.class);
@@ -58,5 +56,4 @@ public class Bootstrap {
             snowflake.setDatacenterId(Long.parseLong(split[1]));
         }
     }
-
 }

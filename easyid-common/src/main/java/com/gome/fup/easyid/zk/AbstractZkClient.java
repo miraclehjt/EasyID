@@ -1,16 +1,16 @@
 package com.gome.fup.easyid.zk;
 
+import com.gome.fup.easyid.util.Cache;
+import com.gome.fup.easyid.util.Constant;
 import com.gome.fup.easyid.util.ConversionUtil;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  *ZkClient抽象类
@@ -64,5 +64,49 @@ public abstract class AbstractZkClient {
             }
         });
     }
-    
+
+    /**
+     * 获取/EasyID根节点下子节点的数量
+     * @return
+     * @throws KeeperException
+     * @throws InterruptedException
+     */
+    public int getRootChildrenSize() throws KeeperException, InterruptedException {
+        List<String> nodes = zooKeeper.getChildren(ZK_ROOT_NODE, null, null);
+        return nodes.size();
+    }
+
+    /**
+     * 获取/EasyID根节点下子节点的数量
+     * @return
+     * @throws KeeperException
+     * @throws InterruptedException
+     */
+    public List<String> getRootChildren() throws KeeperException, InterruptedException {
+        return zooKeeper.getChildren(ZK_ROOT_NODE, null, null);
+    }
+
+    /**
+     * redis队列数量
+     * 动态获取
+     * @return
+     */
+    public int getRedisListSize() {
+        int size;
+        if (Cache.hasKey(Constant.REDIS_LIST_SIZE)) {
+            size =  (Integer)Cache.get(Constant.REDIS_LIST_SIZE);
+        } else {
+            try {
+                size = this.getRootChildrenSize();
+                //设置有效时间60s
+                Cache.set(Constant.REDIS_LIST_SIZE, size,60l);
+            } catch (Exception e) {
+                logger.error(e);
+                size = 1;
+            }
+        }
+        return size;
+    }
+
+
 }
