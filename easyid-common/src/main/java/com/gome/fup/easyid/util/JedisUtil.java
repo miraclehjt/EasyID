@@ -38,9 +38,7 @@ public class JedisUtil {
     }
 
     public synchronized Jedis getJedis() {
-
         return jedisPool.getResource();
-
     }
 
     public void returnResource(Jedis jedis) {
@@ -137,6 +135,10 @@ public class JedisUtil {
                 return jedis.incr(key);
             }
         });
+    }
+
+    public void close() {
+        jedisPool.close();
     }
 
     private Object command(JedisCommand<Object> command) {
