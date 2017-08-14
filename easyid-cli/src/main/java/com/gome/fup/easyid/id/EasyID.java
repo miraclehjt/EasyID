@@ -15,7 +15,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.springframework.beans.factory.InitializingBean;
-import redis.clients.jedis.Jedis;
+import redis.clients.jedis.ShardedJedis;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -48,7 +48,7 @@ public class EasyID implements InitializingBean{
     /**
      *rediss服务地址
      */
-    private String redissAddress;
+    private String redisAddress;
 
 
 
@@ -59,26 +59,24 @@ public class EasyID implements InitializingBean{
     public long nextId() throws InterruptedException {
         long begin = System.currentTimeMillis();
         int list_min_size = zkClient.getRedisListSize() * 300;
-        String id;
-        Jedis jedis = jedisUtil.getJedis();
+        String id = "";
+        ShardedJedis jedis = jedisUtil.getJedis();
+        long len = 0l;
         try {
-            long len = jedis.llen(Constant.REDIS_LIST_NAME);
+            len = jedis.llen(Constant.REDIS_LIST_NAME);
             if ((int) len < list_min_size) {
                 getRedisLock(jedis);
-                if (len == 0l) {
-                    Thread.sleep(100l);
-                    return nextId();
-                }
             }
             id = jedis.lpop(Constant.REDIS_LIST_NAME);
         } finally {
             jedisUtil.returnResource(jedis);
+            if (len == 0l || null == id || "".equals(id)) {
+                Thread.sleep(100l);
+                return nextId();
+            }
         }
-        if (null == id || "".equals(id)) {
-            Thread.sleep(100l);
-            return nextId();
-        }
-        logger.info("nextId use time : " + (System.currentTimeMillis() - begin));
+        //logger.info("nextId use time : " + (System.currentTimeMillis() - begin));
+        System.out.println("nextId use time : " + (System.currentTimeMillis() - begin));
         return Long.valueOf(id);
     }
 
@@ -87,7 +85,7 @@ public class EasyID implements InitializingBean{
      * @throws KeeperException
      * @throws InterruptedException
      */
-    private void getRedisLock(Jedis jedis) {
+    private void getRedisLock(ShardedJedis jedis) {
         if (jedis.setnx(Constant.REDIS_SETNX_KEY, "1") == 1l) {
             jedis.expire(Constant.REDIS_SETNX_KEY, 3);
             try {
@@ -164,19 +162,18 @@ public class EasyID implements InitializingBean{
         this.zkAddress = zkAddress;
     }
 
-    public String getRedissAddress() {
-        return redissAddress;
+    public String getRedisAddress() {
+        return redisAddress;
     }
 
-    public void setRedissAddress(String redissAddress) {
-        this.redissAddress = redissAddress;
+    public void setRedisAddress(String redisAddress) {
+        this.redisAddress = redisAddress;
     }
 
     public void afterPropertiesSet() throws Exception {
         //初始化ZkClient
         this.zkClient = new ZkClient(zkAddress);
-        String[] split = this.redissAddress.split(":");
-        this.jedisUtil = JedisUtil.newInstance(split[0], Integer.valueOf(split[1]));
+        this.jedisUtil = JedisUtil.newInstance(redisAddress);
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
                 zkClient.close();
