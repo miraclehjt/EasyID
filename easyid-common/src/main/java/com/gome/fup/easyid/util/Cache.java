@@ -1,14 +1,7 @@
 package com.gome.fup.easyid.util;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 缓存类
@@ -20,6 +13,15 @@ public class Cache {
 	private static Map<String, Long> expire = new ConcurrentHashMap<String, Long>();
 
 	private static Map<String, Object> cache = new ConcurrentHashMap<String, Object>();
+
+	static {
+		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+			public void run() {
+				expire.clear();
+				cache.clear();
+			}
+		}));
+	}
 
 	/**
 	 * 默认有效时间30分钟
