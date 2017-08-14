@@ -61,6 +61,13 @@ public class Server implements Runnable, InitializingBean {
         //启动服务
         executorService.submit(this);
         logger.info("EasyID Server started!");
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            public void run() {
+                zkClient.close();
+                jedisUtil.close();
+                executorService.shutdown();
+            }
+        }));
     }
 
     public void run() {

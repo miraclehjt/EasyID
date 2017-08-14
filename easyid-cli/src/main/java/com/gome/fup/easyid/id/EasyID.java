@@ -78,7 +78,7 @@ public class EasyID implements InitializingBean{
             Thread.sleep(100l);
             return nextId();
         }
-        System.out.println("nextId use time : " + (System.currentTimeMillis() - begin));
+        logger.info("nextId use time : " + (System.currentTimeMillis() - begin));
         return Long.valueOf(id);
     }
 
@@ -138,7 +138,6 @@ public class EasyID implements InitializingBean{
                 return null;
             }
         });
-
     }
 
     public boolean isFlag() {
@@ -180,6 +179,8 @@ public class EasyID implements InitializingBean{
         this.jedisUtil = JedisUtil.newInstance(split[0], Integer.valueOf(split[1]));
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             public void run() {
+                zkClient.close();
+                jedisUtil.close();
                 executorService.shutdown();
             }
         }));

@@ -19,6 +19,8 @@ import java.io.IOException;
  */
 public class Handler extends SimpleChannelInboundHandler<Request> {
 
+    private static final Logger LOGGER = Logger.getLogger(Handler.class);
+
     private JedisUtil jedisUtil;
 
     private Snowflake snowflake;
@@ -37,22 +39,22 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
                 new Thread(new IncreaseRunnable(zkClient, ip)).start();
                 Long len = jedis.llen(Constant.REDIS_LIST_NAME);
                 if (len < (redis_list_size * 300)) {
-                    System.out.println("len : " + len);
+                    LOGGER.info("len : " + len);
                     if (null == len) len = 0l;
                     //批量生成id
                     long[] ids = snowflake.nextIds((redis_list_size * 1000) - len.intValue());
                     String[] strs = ConversionUtil.longsToStrings(ids);
-                    System.out.println("ids : " + ids.length);
+                    LOGGER.info("ids : " + ids.length);
                     //将生成的id存入redis队列
                     jedis.rpush(Constant.REDIS_LIST_NAME, strs);
                 }
+                LOGGER.info("handler run time:" + (System.currentTimeMillis() - begin));
             } finally {
                 jedis.del(Constant.REDIS_SETNX_KEY);
                 jedisUtil.returnResource(jedis);
+                //zkClient.decrease(ip);
+                ctx.writeAndFlush("").addListener(ChannelFutureListener.CLOSE);
             }
-            System.out.println("handler run time:" + (System.currentTimeMillis() - begin));
-            //zkClient.decrease(ip);
-            ctx.writeAndFlush("").addListener(ChannelFutureListener.CLOSE);
         }
     }
 
