@@ -70,10 +70,10 @@ public class EasyID implements InitializingBean{
             id = jedis.lpop(Constant.REDIS_LIST_NAME);
         } finally {
             jedisUtil.returnResource(jedis);
-            if (len == 0l || null == id || "".equals(id)) {
-                Thread.sleep(100l);
-                return nextId();
-            }
+        }
+        if (len == 0l || null == id || "".equals(id)) {
+            Thread.sleep(100l);
+            return nextId();
         }
         //logger.info("nextId use time : " + (System.currentTimeMillis() - begin));
         System.out.println("nextId use time : " + (System.currentTimeMillis() - begin));
