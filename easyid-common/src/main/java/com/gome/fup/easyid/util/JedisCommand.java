@@ -1,6 +1,6 @@
 package com.gome.fup.easyid.util;
 
-import redis.clients.jedis.Jedis;
+import redis.clients.jedis.ShardedJedis;
 
 /**
  * jedis命令接口
@@ -8,5 +8,5 @@ import redis.clients.jedis.Jedis;
  */
 public interface JedisCommand<T> {
 
-    T command(Jedis jedis);
+    T command(ShardedJedis jedis);
 }

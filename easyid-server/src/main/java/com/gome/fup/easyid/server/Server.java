@@ -44,16 +44,13 @@ public class Server implements Runnable, InitializingBean {
 
     private int redis_list_size;
 
-    @Value("${easyid.redis.host}")
-    private String redishost;
-
-    @Value("${easyid.redis.port}")
-    private int redisport;
+    @Value("${easyid.redis.address}")
+    private String redisAddress;
 
     private JedisUtil jedisUtil;
 
     public void afterPropertiesSet() throws Exception {
-        jedisUtil = JedisUtil.newInstance(redishost, redisport);
+        jedisUtil = JedisUtil.newInstance(redisAddress);
         String localHost = IpUtil.getLocalHost();
         Cache.set(Constant.LOCALHOST, localHost, -1l);
         //查看redis中是否有id,没有则创建

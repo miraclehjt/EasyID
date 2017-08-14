@@ -1,15 +1,18 @@
 package com.gome.fup.easyid.util;
 
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.*;
+import redis.clients.util.Hashing;
+import redis.clients.util.Sharded;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by fupeng-ds on 2017/8/9.
  */
 public class JedisUtil {
 
-    private static JedisPool jedisPool;
+    private static ShardedJedisPool jedisPool;
 
     private static final JedisUtil util = new JedisUtil();
 
@@ -21,33 +24,40 @@ public class JedisUtil {
     private JedisUtil() {
     }
 
-    public synchronized static JedisUtil newInstance(String host, int port) {
+    public synchronized static JedisUtil newInstance(String redisAddress) {
         if (jedisPool == null) {
-            init(host, port);
+            String[] ips = redisAddress.split(",");
+            init(ips);
         }
         return util;
     }
 
-    private static void init(String host, int port) {
+    private static void init(String[] ips) {
         JedisPoolConfig config = new JedisPoolConfig();
         config.setMaxIdle(128);
         config.setMaxTotal(1024);
         config.setMaxWaitMillis(30000);
         config.setTestOnBorrow(true);
-        jedisPool = new JedisPool(config, host, port);
+        List<JedisShardInfo> infos = new ArrayList<JedisShardInfo>(ips.length);
+        for (String ip : ips) {
+            String[] split = ip.split(":");
+            JedisShardInfo info = new JedisShardInfo(split[0], Integer.valueOf(split[1]));
+            infos.add(info);
+        }
+        jedisPool = new ShardedJedisPool(config, infos, Hashing.MURMUR_HASH, Sharded.DEFAULT_KEY_TAG_PATTERN);
     }
 
-    public synchronized Jedis getJedis() {
+    public synchronized ShardedJedis getJedis() {
         return jedisPool.getResource();
     }
 
-    public void returnResource(Jedis jedis) {
+    public void returnResource(ShardedJedis jedis) {
         jedisPool.returnResource(jedis);
     }
 
     public String set(final String key, final String value) {
         return (String)command(new JedisCommand<Object>() {
-            public Object command(Jedis jedis) {
+            public Object command(ShardedJedis jedis) {
                 String set = jedis.set(key, value);
                 jedis.expire(key, EXPIRE);
                 return set;
@@ -57,7 +67,7 @@ public class JedisUtil {
 
     public String get(final String key) {
         return (String)command(new JedisCommand<Object>() {
-            public Object command(Jedis jedis) {
+            public Object command(ShardedJedis jedis) {
                 return jedis.get(key);
             }
         });
@@ -65,7 +75,7 @@ public class JedisUtil {
 
     public Boolean exists(final String key) {
         return (Boolean)command(new JedisCommand<Object>() {
-            public Object command(Jedis jedis) {
+            public Object command(ShardedJedis jedis) {
                 return jedis.exists(key);
             }
         });
@@ -73,7 +83,7 @@ public class JedisUtil {
 
     public Long llen(final String key) {
         return (Long)command(new JedisCommand<Object>() {
-            public Object command(Jedis jedis) {
+            public Object command(ShardedJedis jedis) {
                 return jedis.llen(key);
             }
         });
@@ -81,7 +91,7 @@ public class JedisUtil {
 
     public String lpop(final String key) {
         return (String)command(new JedisCommand<Object>() {
-            public Object command(Jedis jedis) {
+            public Object command(ShardedJedis jedis) {
                 return jedis.lpop(key);
             }
         });
@@ -89,7 +99,7 @@ public class JedisUtil {
 
     public Long rpush(final String key, final String value) {
         return (Long)command(new JedisCommand<Object>() {
-            public Long command(Jedis jedis) {
+            public Long command(ShardedJedis jedis) {
                 return jedis.rpush(key, value);
             }
         });
@@ -97,7 +107,7 @@ public class JedisUtil {
 
     public Long rpush(final String key, final String[] value) {
         return (Long)command(new JedisCommand<Object>() {
-            public Long command(Jedis jedis) {
+            public Long command(ShardedJedis jedis) {
                 return jedis.rpush(key, value);
             }
         });
@@ -105,7 +115,7 @@ public class JedisUtil {
 
     public Long setnx(final String key, final String value, final int seconds) {
         return (Long)command(new JedisCommand<Object>() {
-            public Object command(Jedis jedis) {
+            public Object command(ShardedJedis jedis) {
                 Long result = jedis.setnx(key, value);
                 jedis.expire(key, seconds);
                 return result;
@@ -115,7 +125,7 @@ public class JedisUtil {
 
     public Long expire(final String key, final int seconds) {
         return (Long)command(new JedisCommand<Object>() {
-            public Object command(Jedis jedis) {
+            public Object command(ShardedJedis jedis) {
                 return jedis.expire(key, seconds);
             }
         });
@@ -123,7 +133,7 @@ public class JedisUtil {
 
     public Long del(final String key) {
         return (Long)command(new JedisCommand<Object>() {
-            public Object command(Jedis jedis) {
+            public Object command(ShardedJedis jedis) {
                 return jedis.del(key);
             }
         });
@@ -131,7 +141,7 @@ public class JedisUtil {
 
     public Long incr(final String key) {
         return (Long)command(new JedisCommand<Object>() {
-            public Object command(Jedis jedis) {
+            public Object command(ShardedJedis jedis) {
                 return jedis.incr(key);
             }
         });
@@ -142,7 +152,7 @@ public class JedisUtil {
     }
 
     private Object command(JedisCommand<Object> command) {
-        Jedis jedis = getJedis();
+        ShardedJedis jedis = getJedis();
         try {
             return command.command(jedis);
         } finally {

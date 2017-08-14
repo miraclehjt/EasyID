@@ -10,6 +10,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.ShardedJedis;
 
 import java.io.IOException;
 
@@ -31,7 +32,7 @@ public class Handler extends SimpleChannelInboundHandler<Request> {
     protected void channelRead0(ChannelHandlerContext ctx, Request request) throws Exception {
         if (request.getType() == MessageType.REQUEST_TYPE_CREATE) {
             long begin = System.currentTimeMillis();
-            Jedis jedis = jedisUtil.getJedis();
+            ShardedJedis jedis = jedisUtil.getJedis();
             try {
                 int redis_list_size = zkClient.getRedisListSize();
                 String ip = (String) Cache.get(Constant.LOCALHOST);
