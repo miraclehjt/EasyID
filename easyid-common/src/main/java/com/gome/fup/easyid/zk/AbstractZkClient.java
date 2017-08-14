@@ -11,6 +11,8 @@ import org.apache.zookeeper.ZooKeeper;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  *ZkClient抽象类
@@ -34,6 +36,8 @@ public abstract class AbstractZkClient {
      *ZooKeeper服务地址
      */
     protected String address;
+
+    private Lock lock = new ReentrantLock();
 
     /**
      * ZooKeeper会话有效时间
@@ -102,11 +106,15 @@ public abstract class AbstractZkClient {
         } else {
             try {
                 size = this.getRootChildrenSize();
-                //设置有效时间60s
-                Cache.set(Constant.REDIS_LIST_SIZE, size,60l);
+                if (lock.tryLock()) {
+                    //设置有效时间60s
+                    Cache.set(Constant.REDIS_LIST_SIZE, size, 60l);
+                }
             } catch (Exception e) {
                 logger.error(e);
                 size = 1;
+            } finally {
+                lock.unlock();
             }
         }
         return size;
