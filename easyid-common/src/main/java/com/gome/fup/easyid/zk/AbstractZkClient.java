@@ -44,8 +44,12 @@ public abstract class AbstractZkClient {
      * 关闭zookeeper连接
      * @throws InterruptedException
      */
-    public void close() throws InterruptedException {
-        zooKeeper.close();
+    public void close() {
+        try {
+            zooKeeper.close();
+        } catch (InterruptedException e) {
+            logger.error(e);
+        }
     }
 
     public int getCount(String node) throws KeeperException, InterruptedException {
