@@ -12,27 +12,26 @@ import java.util.concurrent.Executors;
  */
 public class Main {
 
-    private static ExecutorService executorService = Executors.newFixedThreadPool(8);
-
     public static void main(String[] args) {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("classpath:spring-config.xml");
         final EasyID easyID = context.getBean(EasyID.class);
-        long begen = System.currentTimeMillis();
-        int count = 0;
-        final JedisUtil jedisUtil = JedisUtil.newInstance("192.168.56.102", 6379);
-        do {
-            executorService.execute(new Runnable() {
-
+        //final JedisUtil jedisUtil = JedisUtil.newInstance("192.168.56.102", 6379);
+        for (int i = 0; i < 5000; i++) {
+            Thread thread = new Thread(new Runnable() {
                 public void run() {
-                    long id = easyID.nextId();
-                    System.out.println("EasyID nextId : " + id);
-                    jedisUtil.incr("count");
+                    long id = 0;
+                    try {
+                        id = easyID.nextId();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    System.out.println("EasyID nextId : " + id + ",time:" + System.currentTimeMillis());
+                    //jedisUtil.incr("count");
                 }
             });
-        } while (System.currentTimeMillis() - begen < 1000l);
-        System.out.println(count);
+            thread.start();
+        }
         context.close();
-        //System.exit(0);
     }
 
 
