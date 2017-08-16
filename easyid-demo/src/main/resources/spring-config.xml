@@ -7,7 +7,7 @@
          http://www.springframework.org/schema/context/spring-context-4.0.xsd">
 
     <!-- easyID client begin -->
-    <bean id="easyID" class="com.gome.fup.easyid.id.EasyID" >
+    <bean id="easyID" class="com.gome.pop.fup.easyid.id.EasyID" >
         <property name="zkAddress" value="192.168.56.102:2181" />
         <!-- redis 集群部署 以,号分隔 -->
         <property name="redisAddress" value="192.168.56.102:6379" />
