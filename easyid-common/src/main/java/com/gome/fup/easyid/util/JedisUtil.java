@@ -34,8 +34,8 @@ public class JedisUtil {
 
     private static void init(String[] ips) {
         JedisPoolConfig config = new JedisPoolConfig();
-        config.setMaxIdle(500);
-        config.setMaxTotal(1000);
+        config.setMaxIdle(300);
+        config.setMaxTotal(-1);
         config.setMaxWaitMillis(30000);
         config.setTestOnBorrow(true);
         List<JedisShardInfo> infos = new ArrayList<JedisShardInfo>(ips.length);
