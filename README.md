@@ -30,6 +30,7 @@ EasyID是一个以snowflake算法为基础的轻量、高效的分布式主键�
 # 服务部署
 
  - 在easyid-server中的conf.properties文件中，配置redis和zookeeper信息；<br/>
+ - 将本地ip地址配置到hosts文件中；<br/>
  - 使用maven命令打包easyid-server:mvn clean instll -Dmaven.test.skip=true；<br/>
  - 部署easyid-server：java -jar EasyID-Server-STABLE-1.0.jar。<br/>
   
