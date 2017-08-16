@@ -9,7 +9,7 @@ EasyID是一个以snowflake算法为基础的轻量、高效的分布式主键�
  - 轻量级，微服务部署，部署方便，不需要单独的服务器，以jar包的形式提供服务；<br/>
  - 一次编译，多处部署，无需多余配置，方便扩容与缩容；<br/>
  - 无延迟，客户端从redis队列中获取ID，服务端保证队列中始终有值，保证应用平滑不停顿；<br/>
- - 并发性，单机10000并发下，QPS约为1000；<br/>
+ - 高并发，压测10万并发,QPS约为1000左右；<br/>
  - 高可用，可部署多台EasyID服务，通过zookeeper集中管理服务的注册与退出；<br/>
  - 负载均衡，所有在同一zookeeper中管理的服务端，采用轮询方式创建ID。<br/>
  - redis队列自动扩容与缩容，创建的ID存放在redis队列中供客户端提取，redis队列的大小根据服务端应用数量，自动扩大或缩小；<br/>
@@ -30,17 +30,13 @@ EasyID是一个以snowflake算法为基础的轻量、高效的分布式主键�
 # 服务部署
 
  - 在easyid-server中的conf.properties文件中，配置redis和zookeeper信息；<br/>
+ - 将本地ip地址配置到hosts文件中；<br/>
  - 使用maven命令打包easyid-server:mvn clean instll -Dmaven.test.skip=true；<br/>
- - 部署easyid-server：java -jar EasyID-Server-STABLE-1.0.jar -workerid10 -datacenterid11；<br/>
- - 参数说明：<br/>
-    -workerid：工作ID，取值1至31；<br/>
-    -datacenterid：数据中心ID，取值1至31；<br/>
-    若不指定参数，默认workerid为10，datacenterid为11。<br/>
-    建议不同的机器，设置不同的值<br/>
+ - 部署easyid-server：java -jar EasyID-Server-STABLE-1.0.jar。<br/>
   
 
 # 客户端
 
  - 添加easy-cli项目的依赖；<br/>
- - 在spring配置文件中配置EasyID、RedisTemplate，参考easy-demo项目的配置；<br/>
+ - 在spring配置文件中配置EasyID，参考easy-demo项目的配置；<br/>
  - 通过EasyID类的nextId()，获取id。<br/>
