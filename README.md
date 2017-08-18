@@ -33,6 +33,10 @@ EasyID是一个以snowflake算法为基础的轻量、高效的分布式主键�
  - 将本地ip地址配置到hosts文件中；<br/>
  - 使用maven命令打包easyid-server:mvn clean instll -Dmaven.test.skip=true；<br/>
  - 部署easyid-server：java -jar EasyID-Server-STABLE-1.0.jar。<br/>
+
+# docker部署
+ - Dockerfile
+ - docker run --name easyid --net=host -p 9131:9131 -d easyid
   
 
 # 客户端
