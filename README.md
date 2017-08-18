@@ -39,7 +39,7 @@ EasyID是一个以snowflake算法为基础的轻量、高效的分布式主键�
 # docker部署
  - docker build ![Dockerfile](https://github.com/fup1990/EasyID/blob/master/Dockerfile)
  - docker run --name easyid --net=host -p 9131:9131 -d easyid<br/>
- 注：--net=host，选用host模式设置docker的网络连接，将宿主机的ip注册到zookeeper，否则将访问不到docker服务
+ >注：--net=host，选用host模式设置docker的网络连接，将宿主机的ip注册到zookeeper，否则将访问不到docker服务
   
 
 # 客户端
