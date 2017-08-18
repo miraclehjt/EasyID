@@ -12,7 +12,7 @@ public class Main {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("classpath:spring-config.xml");
         final EasyID easyID = context.getBean(EasyID.class);
         //final JedisUtil jedisUtil = JedisUtil.newInstance("192.168.56.102", 6379);
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 4500; i++) {
             Thread thread = new Thread(new Runnable() {
                 public void run() {
                     long id = 0;

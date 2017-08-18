@@ -17,9 +17,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ExecutorService;
@@ -30,7 +28,7 @@ import java.util.concurrent.Executors;
  * Created by fupeng-ds on 2017/8/2.
  */
 @Component
-public class Server implements Runnable, InitializingBean {
+public class Server implements Runnable {
 
     private static final Logger logger = Logger.getLogger(Server.class);
 
@@ -39,20 +37,22 @@ public class Server implements Runnable, InitializingBean {
     @Autowired
     private Snowflake snowflake;
 
-    @Autowired
     private ZkClient zkClient;
 
     private int redis_list_size;
 
-    @Value("${easyid.redis.address}")
     private String redisAddress;
+
+    private String zookeeperAddres;
 
     private JedisUtil jedisUtil;
 
-    public void afterPropertiesSet() throws Exception {
+    public void start() throws Exception {
         jedisUtil = JedisUtil.newInstance(redisAddress);
         String localHost = IpUtil.getLocalHost();
         Cache.set(Constant.LOCALHOST, localHost, -1l);
+        zkClient = new ZkClient(zookeeperAddres);
+        zkClient.register(localHost);
         //查看redis中是否有id,没有则创建
         pushIdsInRedis();
         //启动服务
@@ -133,5 +133,21 @@ public class Server implements Runnable, InitializingBean {
 
     public void setRedis_list_size(int redis_list_size) {
         this.redis_list_size = redis_list_size;
+    }
+
+    public String getZookeeperAddres() {
+        return zookeeperAddres;
+    }
+
+    public void setZookeeperAddres(String zookeeperAddres) {
+        this.zookeeperAddres = zookeeperAddres;
+    }
+
+    public String getRedisAddress() {
+        return redisAddress;
+    }
+
+    public void setRedisAddress(String redisAddress) {
+        this.redisAddress = redisAddress;
     }
 }

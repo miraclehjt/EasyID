@@ -1,5 +1,7 @@
 package com.gome.pop.fup.easyid.server;
 
+import com.gome.pop.fup.easyid.exception.RedisNoAddressException;
+import com.gome.pop.fup.easyid.exception.ZooKeeperNoAddressException;
 import com.gome.pop.fup.easyid.snowflake.Snowflake;
 import com.gome.pop.fup.easyid.zk.ZkClient;
 import org.apache.zookeeper.KeeperException;
@@ -14,16 +16,34 @@ import java.io.IOException;
 public class Bootstrap {
 
     /**
-     * 例：java -jar EasyID.jar -zk127.0.0.1:2181 -workerid10 -datacenterid11
+     * 例：java -jar EasyID.jar -zookeeper127.0.0.1:2181 -redis127.0.0.6379
      * @param args
      * @throws IOException
      * @throws KeeperException
      * @throws InterruptedException
      */
-    public static void main(String[] args) throws IOException, KeeperException, InterruptedException {
+    public static void main(String[] args) throws Exception {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("classpath:spring-config.xml");
+        Server server = context.getBean(Server.class);
+        String zookeeperAddres = "";
+        String redisAddress = "";
+        for (String arg : args) {
+            if (arg.contains("-zookeeper")) zookeeperAddres = arg.split("-zookeeper")[1];
+            if (arg.contains("-redis")) redisAddress = arg.split("-redis")[1];
+        }
+        if ("".equals(zookeeperAddres)) {
+            throw new ZooKeeperNoAddressException("没有zookeeper地址");
+        } else {
+            server.setZookeeperAddres(zookeeperAddres);
+        }
+        if ("".equals(redisAddress)) {
+            throw new RedisNoAddressException("没有redis地址");
+        } else {
+            server.setRedisAddress(redisAddress);
+        }
+        server.start();
         //自动管理workerid与datacenterid
-        ZkClient zkClient = context.getBean(ZkClient.class);
+        ZkClient zkClient = server.getZkClient();
         Snowflake snowflake = context.getBean(Snowflake.class);
         int size = zkClient.getRootChildrenSize();
         if (size > 31) {
@@ -32,27 +52,5 @@ public class Bootstrap {
         }
         snowflake.setWorkerId(size);
         snowflake.setWorkerId(size);
-    }
-
-    /**
-     * 解析参数
-     * 参数说明：
-     *         -zk127.0.0.1:2181， zookeeper地址
-     *         -workerid10， snowflake的工作id，取值范围0~31
-     *         -datacenterid11， snowflake的工作中心id，取值范围0~31
-     * @param context
-     * @param arg
-     */
-    private static void analysis(ClassPathXmlApplicationContext context, String arg) throws KeeperException, InterruptedException {
-        if (arg.contains("-workerid")) {
-            String[] split = arg.split("-workerid");
-            Snowflake snowflake = context.getBean(Snowflake.class);
-            snowflake.setWorkerId(Long.parseLong(split[1]));
-        }
-        if (arg.contains("-datacenterid")) {
-            String[] split = arg.split("-datacenterid");
-            Snowflake snowflake = context.getBean(Snowflake.class);
-            snowflake.setDatacenterId(Long.parseLong(split[1]));
-        }
     }
 }
