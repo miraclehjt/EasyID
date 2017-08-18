@@ -35,7 +35,7 @@ EasyID是一个以snowflake算法为基础的轻量、高效的分布式主键�
  - 部署easyid-server：java -jar EasyID-Server-STABLE-1.0.jar。<br/>
 
 # docker部署
- - Dockerfile
+ - ![Dockerfile](https://github.com/fup1990/EasyID/Dockerfile)
  - docker run --name easyid --net=host -p 9131:9131 -d easyid
   
 
