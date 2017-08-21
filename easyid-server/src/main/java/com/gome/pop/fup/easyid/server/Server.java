@@ -39,8 +39,6 @@ public class Server implements Runnable {
 
     private ZkClient zkClient;
 
-    private int redis_list_size;
-
     private String redisAddress;
 
     private String zookeeperAddres;
@@ -102,10 +100,10 @@ public class Server implements Runnable {
 
     private void pushIdsInRedis() throws KeeperException, InterruptedException {
         //从zookeeper中获取队列长度参数
-        redis_list_size = zkClient.getRedisListSize() * 1000;
+        int base = zkClient.getRedisListSize();
         Long len = jedisUtil.llen(Constant.REDIS_LIST_NAME);
-        if (len == null || len.intValue() == 0) {
-            long[] ids = snowflake.nextIds(redis_list_size);
+        if (len == null || len.intValue() == 0 || len.intValue() < (base * 300)) {
+            long[] ids = snowflake.nextIds((base * 1000) - len.intValue());
             String[] strings = ConversionUtil.longsToStrings(ids);
             jedisUtil.rpush(Constant.REDIS_LIST_NAME, strings);
         }
@@ -125,14 +123,6 @@ public class Server implements Runnable {
 
     public void setZkClient(ZkClient zkClient) {
         this.zkClient = zkClient;
-    }
-
-    public int getRedis_list_size() {
-        return redis_list_size;
-    }
-
-    public void setRedis_list_size(int redis_list_size) {
-        this.redis_list_size = redis_list_size;
     }
 
     public String getZookeeperAddres() {
