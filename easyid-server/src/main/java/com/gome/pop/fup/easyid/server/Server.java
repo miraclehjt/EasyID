@@ -94,7 +94,6 @@ public class Server implements Runnable {
         } finally {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
-            executorService.shutdown();
         }
     }
 
